@@ -1,0 +1,11 @@
+# Python packages for the tools/ workers, skills and recipes (pip, no conda; same list as environment.yml).
+# The klayout pip module comes from flake_catalog's requirements.txt; KLayout's own Python provides pya.
+numpy
+scipy
+scikit-image
+scikit-learn
+opencv-python-headless
+gdstk
+shapely
+matplotlib
+pillow
