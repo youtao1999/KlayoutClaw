@@ -6,6 +6,11 @@ comparing its opaque pixels (the deck stores background-removed copies, possibly
 crop, flip, rotation and position become a pose: image px -> blueprint px. Several pictures of the
 same image are pieces of one flake (e.g. graphene cut for twisted stacking).
 
+Device folder layout (stack_design / flake_catalog device_pipeline_roadmap.md): the deck is read from
+<dir>/plan/, the single-flake images and catalog GDS/JSON from <dir>/ingredients/, the full stack and the
+chip template from <dir>/photos/. Writes <dir>/plan/stack.json and <dir>/plan/stack/masks/*.png; paths in
+stack.json are relative to plan/ (../ingredients/..., ../photos/...).
+
 Usage:
   python pptx_to_stack.py --dir <device_folder> --pptx blueprint.pptx --slide 6 \
      --sample sample01 --order top_top_hBN,top_graphite,top_hBN,graphene,bottom_hBN,graphite \
@@ -14,9 +19,9 @@ Usage:
      --role bottom_BN.png=bottom_hBN:BN002a --role bottom_graphite.png=graphite \
      --catalog top_BN.png=top_BN.gds:20/0 --catalog graphene.png=graphene.gds:1/0 \
      --catalog bottom_BN.png=bottom_BN.gds:20/0 \
-     --twist graphene=1.9 --template ../Template.gds --field bottom-left --field-center 2500,2500 \
+     --twist graphene=1.9 --template Template.gds --field bottom-left --field-center 2500,2500 \
      --device hall_bar_dualgated_graphite:dualgated_hallbar --out stack.json
-Writes <dir>/stack.json and <dir>/stack/masks/*.png (+ stack/blueprint_slide<N>.png render).
+Also renders plan/stack/blueprint_slide<N>.png.
 """
 import argparse
 import json
@@ -71,7 +76,7 @@ def pose_emu(p, W, H):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", required=True)
+    ap.add_argument("--dir", required=True, help="device folder (plan/, ingredients/, photos/)")
     ap.add_argument("--pptx", required=True)
     ap.add_argument("--slide", type=int, required=True)
     ap.add_argument("--sample", required=True)
@@ -90,8 +95,9 @@ def main():
     ap.add_argument("--match-max", type=float, default=5.0, help="max mean |diff| on opaque px to accept a match")
     ap.add_argument("--out", default="stack.json")
     a = ap.parse_args()
-    D = a.dir
-    os.makedirs(os.path.join(D, "stack", "masks"), exist_ok=True)
+    PL, ING, PH = (os.path.join(a.dir, sub) for sub in ("plan", "ingredients", "photos"))
+    ing, ph = (lambda f: "../ingredients/" + f), (lambda f: "../photos/" + f)   # stored relative to plan/
+    os.makedirs(os.path.join(PL, "stack", "masks"), exist_ok=True)
 
     roles = {}
     for s in a.role:
@@ -105,13 +111,13 @@ def main():
         cats[img] = (gds, [int(v) for v in ld.split("/")])
     twists = {k: float(v) for k, v in (s.split("=") for s in a.twist)}
 
-    images = {f: cv2.imread(os.path.join(D, f)) for f in roles}
+    images = {f: cv2.imread(os.path.join(ING, f)) for f in roles}
     for f, im in images.items():
         if im is None:
             sys.exit("cannot read %s" % f)
     H0, W0 = next(iter(images.values())).shape[:2]
 
-    z = zipfile.ZipFile(os.path.join(D, a.pptx))
+    z = zipfile.ZipFile(os.path.join(PL, a.pptx))
     pics, texts = read_slide(z, a.slide)
 
     placed, ignored, emu_px = [], [], []
@@ -154,9 +160,9 @@ def main():
         mine = [q for q in placed if q["image"] == img]
         if img in cats:
             gds, ld = cats[img]
-            base = catalog_mask(os.path.join(D, gds), ld, (H0, W0))
-            outline = dict(source="catalog", gds=gds, layer=ld,
-                           json=os.path.splitext(gds)[0] + ".json" if os.path.exists(os.path.join(D, os.path.splitext(gds)[0] + ".json")) else None)
+            base = catalog_mask(os.path.join(ING, gds), ld, (H0, W0))
+            js = os.path.splitext(gds)[0] + ".json"
+            outline = dict(source="catalog", gds=ing(gds), layer=ld, json=ing(js) if os.path.exists(os.path.join(ING, js)) else None)
         elif mine:
             base = np.where(mine[0]["alpha"] > 128, 255, 0).astype(np.uint8)
             outline = dict(source="pptx_alpha", media=mine[0]["p"]["media"])
@@ -174,7 +180,7 @@ def main():
             if base is not None:
                 msk[max(y0, 0):y1, max(x0, 0):x1] = base[max(y0, 0):y1, max(x0, 0):x1]
             mpath = os.path.join("stack", "masks", pid + ".png")
-            cv2.imwrite(os.path.join(D, mpath), msk)
+            cv2.imwrite(os.path.join(PL, mpath), msk)
             sc = math.hypot(M[0, 0], M[1, 0])
             pieces.append(dict(id=pid, picture=q["p"]["name"], media=q["p"]["media"], crop_px=[x0, y0, x1, y1],
                                mask=mpath, mask_area_px=int((msk > 0).sum()),
@@ -183,7 +189,7 @@ def main():
                                          flip=bool(q["p"]["flipH"] or q["p"]["flipV"])),
                                twist_deg=round(q["p"]["rot"] - min(rots), 3) if len(mine) > 1 else None,
                                match_mean_diff=q["match"]))
-        layers.append(dict(role=role, flake_id=fid, image=img, outline=outline, pieces=pieces,
+        layers.append(dict(role=role, flake_id=fid, image=ing(img), outline=outline, pieces=pieces,
                            nominal_twist_deg=twists.get(role)))
 
     stack = {"format": "klayoutclaw.stack/0.1", "sample": a.sample,
@@ -191,7 +197,7 @@ def main():
     cat_um = None
     for img, (gds, ld) in cats.items():
         import klayout.db as db
-        ly = db.Layout(); ly.read(os.path.join(D, gds))
+        ly = db.Layout(); ly.read(os.path.join(ING, gds))
         b = db.Region(ly.top_cells()[0].begin_shapes_rec(ly.layer(0, 0))).bbox()
         if not b.empty():
             cat_um = b.width() * ly.dbu / W0
@@ -201,16 +207,16 @@ def main():
     if a.device:
         t, _, r = a.device.partition(":")
         stack["device"] = dict(type=t, recipe=r or None)
-    stack["full_stack"] = dict(raw=a.full_stack, lut=a.full_stack_lut if os.path.exists(os.path.join(D, a.full_stack_lut)) else None)
+    stack["full_stack"] = dict(raw=ph(a.full_stack), lut=ph(a.full_stack_lut) if os.path.exists(os.path.join(PH, a.full_stack_lut)) else None)
     if a.template:
-        stack["template"] = dict(gds=a.template, field=a.field,
+        stack["template"] = dict(gds=ph(a.template), field=a.field,
                                  field_center_um=[float(v) for v in a.field_center.split(",")] if a.field_center else None,
                                  rotation_hint_deg=a.rotation_hint)
     stack["blueprint"] = dict(source=a.pptx, slide=a.slide, slide_text=texts, emu_per_px=round(epx, 2),
                               frame="blueprint px = slide EMU / emu_per_px, y down; 1 blueprint px = 1 image px")
     stack["layers"] = layers
     stack["ignored"] = ignored
-    json.dump(stack, open(os.path.join(D, a.out), "w"), indent=1)
+    json.dump(stack, open(os.path.join(PL, a.out), "w"), indent=1)
 
     # render the plan (outlines in blueprint px) for a visual check
     cols = [(255, 255, 0), (255, 0, 255), (0, 255, 255), (0, 0, 255), (0, 200, 0), (255, 0, 0), (0, 128, 255)]
@@ -218,7 +224,7 @@ def main():
     for L in layers:
         for pc in L["pieces"]:
             if pc["pose"] and pc["mask"]:
-                cs, _ = cv2.findContours(cv2.imread(os.path.join(D, pc["mask"]), 0), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                cs, _ = cv2.findContours(cv2.imread(os.path.join(PL, pc["mask"]), 0), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 M = np.array(pc["pose"]["M"])
                 pc["_c"] = [c.reshape(-1, 2) @ M[:, :2].T + M[:, 2] for c in cs]
                 allpts += [c for c in pc["_c"]]
@@ -230,7 +236,7 @@ def main():
                 for c in pc.pop("_c", []):
                     cv2.polylines(can, [np.round(c - lo).astype(np.int32)], True, cols[i % len(cols)], 3)
             cv2.putText(can, L["role"], (10, 30 + 30 * i), 0, 0.9, cols[i % len(cols)], 2)
-        cv2.imwrite(os.path.join(D, "stack", "blueprint_slide%d.png" % a.slide), can)
+        cv2.imwrite(os.path.join(PL, "stack", "blueprint_slide%d.png" % a.slide), can)
     print(json.dumps(dict(layers=[(L["role"], [(p["id"], p["pose"]["rot_deg"] if p["pose"] else None, p.get("mask_area_px")) for p in L["pieces"]]) for L in layers],
                           ignored=ignored, emu_per_px=epx, um_per_px=stack["imaging"].get("um_per_px")), indent=1))
 

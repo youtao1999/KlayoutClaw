@@ -81,8 +81,11 @@ for q in res.get("patches", []) or []:
 ly.write(a.out)
 
 n_nets = res.get("n_nets", min(res.get("total_pins_a", 0), res.get("total_pins_b", 0)))
+# the worker reports a coarsened grid (auto_map_resolution) in "errors"; that is a note, not a failure
+notes = [e for e in res.get("errors", []) if str(e).startswith("auto_map_resolution")]
+errors = [e for e in res.get("errors", []) if e not in notes]
 summary = dict(status=res.get("status"), routed_pairs=res.get("routed_pairs", n_paths), n_nets=n_nets,
-               paths=n_paths, patches=len(res.get("patches", []) or []), errors=res.get("errors", []),
+               paths=n_paths, patches=len(res.get("patches", []) or []), errors=errors, notes=notes,
                rescued_nets=res.get("rescued_nets", 0), out=a.out)
 print(json.dumps(summary, indent=1))
 sys.exit(0 if summary["routed_pairs"] == n_nets and not summary["errors"] else 2)
