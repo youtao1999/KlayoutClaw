@@ -1,18 +1,21 @@
-"""Step W: one GDS layer per EBL write, for review and for the writer.
+"""Step W: one GDS layer per EBL exposure, for review and for the writer.
 
-Input : result.gds (all design layers) + params. Output: writes.gds with layer k/0 = everything exposed
-in EBL write k (solid = exposed), each merged, top cell only; plus writes.lyp (KLayout layer names).
-Nothing else: no flakes, no template, no scratch layers.
+Input : result.gds (all design layers) + params. Output: writes.gds with layer k = process step k and
+datatype d = beam-current class within that step (solid = exposed), each merged, top cell only; plus
+writes.lyp (KLayout layer names). Shapes written in the same step with different beam currents (fine
+electrodes vs. big pads) are on different datatypes. Nothing else: no flakes, template or scratch layers.
 
 Optional photo overlay (--image + --warp-px): the microscope image saved as a KLayout image file (.lyimg:
 pixels + placement) using the fine-marker alignment, so the template markers in the photo sit on the GDS
 markers. Load it in KLayout over writes.gds / result.gds (File > Add Image..., choose the .lyimg).
 
-Writes come from params "ebl_writes" (list of {"name", "layers": [design layer keys]}); default is the
-dual-gated process:
-  1 step1_topgate_etch : L31            (CHF3 top-top hBN, O2 top graphite)
-  2 step2_metal        : L22+L23+L24+L2 (CHF3 top hBN, evaporate)
-  3 step3_final_etch   : L20            (fingers / graphene shaping)
+Writes come from params "ebl_writes" (list of {"name", "layers": [design layer keys], "gds": [layer,
+datatype], "current": "small"|"large"|...}); default is the dual-gated process:
+  1/0 step1_topgate_etch      : L31          (CHF3 top-top hBN, O2 top graphite)
+  2/0 step2_fine_electrodes   : L22+L23+L24  (same write as 2/1, small current; CHF3 top hBN, evaporate)
+  2/1 step2_pads_and_leads    : L2           (same write as 2/0, large current)
+  3/0 step3_final_etch        : L20          (fingers / graphene shaping)
+2/0 and 2/1 overlap where the wide leads meet the fine routes (the routing patches) so they stitch.
 
 Usage: python export_writes.py --in result.gds --params params.json --out writes.gds \
            [--image full_stack_raw.png --warp-px gds_warp_px.npy [--image-out overlay.lyimg]]
@@ -29,11 +32,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from recipe_lib import Design, load_params  # noqa: E402
 
 DEFAULT = [
-    {"name": "step1_topgate_etch", "layers": ["tg_etch"]},
-    {"name": "step2_metal", "layers": ["graphite_contact", "electrodes", "tg_contact", "pads"]},
-    {"name": "step3_final_etch", "layers": ["etch"]},
+    {"name": "step1_topgate_etch", "layers": ["tg_etch"], "gds": [1, 0]},
+    {"name": "step2_fine_electrodes", "layers": ["graphite_contact", "electrodes", "tg_contact"], "gds": [2, 0], "current": "small"},
+    {"name": "step2_pads_and_leads", "layers": ["pads"], "gds": [2, 1], "current": "large"},
+    {"name": "step3_final_etch", "layers": ["etch"], "gds": [3, 0]},
 ]
-COLORS = ["#ff8000", "#e0b000", "#ff3030", "#30a0ff", "#30c060"]
+COLORS = ["#ff8000", "#e0b000", "#a07000", "#ff3030", "#30a0ff", "#30c060"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--in", dest="inp", required=True)
@@ -78,17 +82,30 @@ writes = P.get("ebl_writes", DEFAULT)
 out = db.Layout()
 out.dbu = D.dbu
 top = out.create_cell(D.top.name)
-report = []
+report, regs = [], {}
 for k, w in enumerate(writes, 1):
+    ld = tuple(w.get("gds", [k, 0]))
+    if ld in regs:
+        sys.exit("ebl_writes: two entries on %d/%d" % ld)
     r = db.Region()
     for key in w["layers"]:
         r += D.R(key)
     r = r.merged()
     if r.is_empty():
-        sys.exit("write %d (%s) is empty - is %s the finished design?" % (k, w["name"], a.inp))
-    top.shapes(out.layer(db.LayerInfo(k, 0, w["name"]))).insert(r)
-    report.append(dict(layer="%d/0" % k, name=w["name"], from_layers=w["layers"],
+        sys.exit("write %d/%d (%s) is empty - is %s the finished design?" % (ld + (w["name"], a.inp)))
+    top.shapes(out.layer(db.LayerInfo(ld[0], ld[1], w["name"]))).insert(r)
+    regs[ld] = r
+    report.append(dict(layer="%d/%d" % ld, name=w["name"], current=w.get("current"), from_layers=w["layers"],
                        polygons=r.count(), area_um2=round(r.area() * D.dbu * D.dbu, 1)))
+for (l1, d1), r1 in regs.items():                  # same step, different currents: report the stitch overlap
+    for (l2, d2), r2 in regs.items():
+        if l1 == l2 and d1 < d2:
+            per = [round((db.Region(p) & r2).area() * D.dbu * D.dbu, 3) for p in r1.each()]
+            hits = [sum(1 for q in r2.each() if not (db.Region(p) & db.Region(q)).is_empty()) for p in r1.each()]
+            report.append(dict(stitch="%d/%d x %d/%d" % (l1, d1, l2, d2), overlap_um2=round(sum(per), 2),
+                               min_overlap_per_net_um2=min(per), every_net_joins_one=all(h == 1 for h in hits)))
+            if not all(h == 1 for h in hits):
+                sys.exit("%d/%d and %d/%d do not stitch one-to-one: %s" % (l1, d1, l2, d2, hits))
 opt = db.SaveLayoutOptions()
 opt.gds2_max_vertex_count = 4000          # keep every GDS record < 32 kB (other readers / EBL software)
 out.write(a.out, opt)
@@ -96,9 +113,11 @@ out.write(a.out, opt)
 lyp = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>", "<layer-properties>"]
 for k, w in enumerate(writes, 1):
     c = COLORS[(k - 1) % len(COLORS)]
+    ld = tuple(w.get("gds", [k, 0]))
+    label = "%d/%d %s" % (ld + (w["name"],)) + (" (%s current)" % w["current"] if w.get("current") else "")
     lyp += [" <properties>", "  <frame-color>%s</frame-color>" % c, "  <fill-color>%s</fill-color>" % c,
             "  <dither-pattern>I9</dither-pattern>", "  <visible>true</visible>", "  <width>1</width>",
-            "  <name>%d %s</name>" % (k, w["name"]), "  <source>%d/0@1</source>" % k, " </properties>"]
+            "  <name>%s</name>" % label, "  <source>%d/%d@1</source>" % ld, " </properties>"]
 lyp.append("</layer-properties>")
 open(os.path.splitext(a.out)[0] + ".lyp", "w").write("\n".join(lyp) + "\n")
 res = dict(out=a.out, writes=report)
