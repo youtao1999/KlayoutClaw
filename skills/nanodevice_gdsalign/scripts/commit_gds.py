@@ -34,6 +34,8 @@ LAYER_MAP = {
     "graphene": (11, 0),
     "bottom_hBN": (12, 0),
     "graphite": (13, 0),
+    "top_graphite": (14, 0),
+    "top_top_hBN": (16, 0),
 }
 
 

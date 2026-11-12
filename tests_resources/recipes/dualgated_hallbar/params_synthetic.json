@@ -1,0 +1,48 @@
+{
+  "sample": "synthetic_dualgate",
+  "units": "um; device coordinates are in the LOCAL strip frame (x' across the bottom-graphite strip, y' along it, +y' towards gate_end), origin = bottom-graphite hull-point centroid",
+
+  "layers": {
+    "top_top_hbn": [16, 0], "top_graphite": [14, 0],
+    "top_hbn": [10, 0], "graphene": [11, 0], "bottom_hbn": [12, 0], "graphite": [13, 0],
+    "defects": [50, 0],
+    "top_gate": [1, 0], "tg_contact": [24, 0], "graphite_contact": [22, 0],
+    "bg_protect": [26, 0], "tg_etch": [31, 0],
+    "tips_tmp": [21, 0], "electrodes": [23, 0], "pads": [2, 0], "pins_tmp": [100, 0],
+    "etch_protect": [25, 0], "etch_outline": [15, 0], "etch": [20, 0],
+    "markers": [[4, 0], [17, 0], [18, 0], [19, 0]]
+  },
+
+  "gate_end": "north",
+
+  "channel": { "x": [-1.5, 1.5], "y": [-10.0, 10.0] },
+
+  "arms": { "width": 1.0, "tip_width": 1.0, "contact_gap": 2.0, "tip_length": 1.4, "bridge_length": 2.0,
+            "y_range": [-9.5, 9.5], "sides": ["L", "R"], "exclude": [] },
+
+  "finger": { "overshoot": 0.8, "channel_overlap": 0.1 },
+
+  "bridge": { "overlap": 0.3, "extra_half_width": 0.1 },
+
+  "tg_contact": { "box": [-1.0, 19.0, 1.0, 21.0], "margin": 1.0, "tab": [[-1.5, 9.9, 1.5, 19.0]] },
+
+  "graphite_contact": { "box": [-2.0, -20.6, 2.0, -19.0] },
+
+  "step1": { "window_grow": 2.0, "bg_protect_grow": 0.5 },
+
+  "protect": { "top_gate_grow": 0.0, "contact_grow": 0.3 },
+
+  "pads": { "n": 16, "size": 100, "radius": 350, "bump_radius": 400, "start_deg": 90, "clockwise": true, "marker_clearance": 20 },
+
+  "routing": {
+    "pin_layer_a": "100/0", "pin_layer_b": "2/0", "output_layer": "23/0",
+    "obstacle_layers": ["1/0", "13/0", "25/0", "21/0", "22/0", "24/0", "19/0", "4/0", "17/0", "18/0"],
+    "two_level": "on", "inner_margin": 85, "inner_width": 0.5, "outer_width": 4, "path_width": 4, "patch_size": 5,
+    "pin_safe_distance_a": 0.5, "pin_safe_distance_b": 5, "path_safe_distance": 0.8, "obs_safe_distance": 0.5, "timeout": 600
+  },
+
+  "post_route": { "tg_clearance": 0.5, "g_clearance": 0.5, "min_electrode_gap": 0.6 },
+
+  "etch": { "outline_grow": 3.0, "outline_close": 4.0, "outline_simplify": 1.0, "outline_min_margin": 1.5,
+            "finger_width": 10.0, "finger_reach": 30.0, "metal_clearance": 0.2, "pad_clearance": 1.0 }
+}
