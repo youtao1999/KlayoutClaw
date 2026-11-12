@@ -111,7 +111,7 @@ fingers = db.Region([p for p in fingers.each() if p.area() * dbu * dbu >= 1.0]).
 etch = (((outline - prot) + fingers).merged() - prot).merged()
 pockets = (etch.hulls() - etch).merged()
 fill = db.Region([p for p in pockets.each() if (db.Region(p) & prot).is_empty()])
-etch = (etch + (fill - keep_out)).merged()
+etch = ((etch + (fill - keep_out)).merged() - prot - L1).merged()     # exact: no slivers on the top gate
 
 D.put("etch_outline", outline)
 D.put("etch", etch)

@@ -42,7 +42,14 @@ Since 2026-11-11 the recipe also has:
   check (no top graphite left on exposed bottom graphite after step 1) and a bottom-gate
   connectivity check;
 - `arms.min_tip_graphene_frac`;
-- exact distances through shapely (`dg_lib.py`).
+- exact distances through shapely (`dg_lib.py`);
+- two contacts per gate (`tg_contact` / `graphite_contact` lists; verify enforces `min_gate_contacts`,
+  default 2), bottom-gate contacts on graphene that sits directly on the bottom graphite
+  (`isolated_graphene`, cut from the device in step 3), and step-3 resist on bare bottom graphite at
+  each bottom-gate contact;
+- per-side arm positions (`arms.y` = {"L": [...], "R": [...]}), overshoot and bridge, a hard check that
+  every contact touches the overlap of all graphene pieces (`arms.min_active_overlap`), and straight
+  escape stubs (`arms.escape`, `escape` on gate contacts) so routes start outside the device.
 
 Design choices to confirm with the user:
 - `protect.top_gate_grow = 0`: the step-3 resist edge sits exactly on the top-gate edge. Any grow

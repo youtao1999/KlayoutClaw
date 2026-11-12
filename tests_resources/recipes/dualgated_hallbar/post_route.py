@@ -27,7 +27,7 @@ import klayout.db as db
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "topgated_hallbar"))
 from recipe_lib import Design, load_params  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from dg_lib import dist, space  # noqa: E402
+from dg_lib import as_list, dist, isolated_zone, space  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--in", dest="inp", required=True)
@@ -51,6 +51,8 @@ pins = [db.Region(p) for p in D.R("pins_tmp").each()]
 pads = [db.Region(p) for p in D.R("pads").each()]
 L1, L22, L24 = D.R("top_gate"), D.R("graphite_contact"), D.R("tg_contact")
 g, bg = D.R("graphene"), D.R("graphite")
+g_bg = (g - isolated_zone(D, P, P["protect"]["contact_grow"] + GC_ + 0.05)).merged()   # graphene a bottom-gate net must avoid
+N_TG, N_BG = len(as_list(P["tg_contact"])), len(as_list(P["graphite_contact"]))
 
 # ---- group route shapes into nets (touching)
 parent = list(range(len(shapes)))
@@ -102,7 +104,7 @@ def violations(n, cand):
         v.append("over bottom graphite")
     if n["kind"] == "tg" and nz(dist(cand - L1, g, dbu)) < GC_:
         v.append("top-gate metal near graphene")
-    if n["kind"] == "bg" and nz(dist(cand, g, dbu)) < GC_:
+    if n["kind"] == "bg" and nz(dist(cand, g_bg, dbu)) < GC_:
         v.append("bottom-gate metal near graphene")
     return v
 
@@ -175,12 +177,12 @@ res = dict(
     ohmic_to_top_gate_gap=dist(ohm, L1, dbu),
     bg_net_to_top_gate_gap=dist(bgn, L1, dbu),
     tg_net_outside_L1_to_graphene_gap=dist(tgn - L1, g, dbu),
-    bg_net_to_graphene_gap=dist(bgn, g, dbu),
+    bg_net_to_graphene_gap=dist(bgn, g_bg, dbu),
     each_electrode_one_wide=[sum(1 for w in W if not (db.Region(p) & db.Region(w)).is_empty()) for p in E],
     close_electrode_pairs=close, tip_escape_fixes=fixes,
 )
 ok = (not any(f["how"].startswith("MANUAL") for f in fixes) and len(E) == len(nets)
-      and res["kinds"]["tg"] == 1 and res["kinds"]["bg"] == 1 and not close
+      and res["kinds"]["tg"] == N_TG and res["kinds"]["bg"] == N_BG and not close
       and res["ohmic_over_bottom_graphite_um2"] == 0
       and nz(res["ohmic_to_top_gate_gap"]) >= TGC - 0.01 and nz(res["bg_net_to_top_gate_gap"]) >= TGC - 0.01
       and nz(res["tg_net_outside_L1_to_graphene_gap"]) >= GC_ - 0.01 and nz(res["bg_net_to_graphene_gap"]) >= GC_ - 0.01

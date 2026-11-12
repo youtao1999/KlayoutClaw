@@ -33,3 +33,24 @@ def space(r, dbu, dmax=10.0):
             if d is not None and (best is None or d < best):
                 best = d
     return best
+
+
+def as_list(v):
+    return v if isinstance(v, list) else [v]
+
+
+def shape(D, c):
+    """Region for a params entry {"box": [x1,y1,x2,y2]} or {"poly": [[x,y],..]} in the local frame (um)."""
+    if "poly" in c:
+        return db.Region((D.T * db.DPolygon([db.DPoint(x, y) for x, y in c["poly"]])).to_itype(D.dbu))
+    return D.box(*c["box"])
+
+
+def isolated_zone(D, P, grow):
+    """Graphene that a bottom-gate contact may touch: around contacts flagged "isolated_graphene" (that
+    graphene lies directly on the bottom graphite and is cut from the device in step 3)."""
+    z = db.Region()
+    for c in as_list(P["graphite_contact"]):
+        if c.get("isolated_graphene"):
+            z += shape(D, c).sized(D.um(grow))
+    return z.merged()
