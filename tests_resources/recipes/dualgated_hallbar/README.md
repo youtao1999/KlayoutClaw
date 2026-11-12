@@ -25,7 +25,7 @@ bottom hBN L12 → bottom graphite L13 (the local frame is built from L13).
 | R2 | `post_route.py` | → `post.gds` (L23 all fine electrodes, L2 one polygon per net; tip-escape fix) |
 | E | `etch_mask.py` | → `result.gds` (L15, L20) |
 | V | `verify.py` | → `verify.json` (about 40 checks: device, step 1, step 2, step 3, surviving graphene) |
-| W | `export_writes.py` | `result.gds` → `writes.gds` + `writes.lyp`: one layer per EBL write (+ optional aligned photo on 100/*, reference only) |
+| W | `export_writes.py` | `result.gds` → `writes.gds` + `writes.lyp` (one layer per EBL write) + `<image>.lyimg` (photo placed by the marker alignment) |
 
 `selftest.py` builds rectangular flakes on your chip template (`--template`) and runs P4 through W with
 `params_synthetic.json`; every check passes. Two deliberately bad designs are caught:

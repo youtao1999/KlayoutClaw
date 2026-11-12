@@ -4,10 +4,9 @@ Input : result.gds (all design layers) + params. Output: writes.gds with layer k
 in EBL write k (solid = exposed), each merged, top cell only; plus writes.lyp (KLayout layer names).
 Nothing else: no flakes, no template, no scratch layers.
 
-Optional photo overlay (--image + --warp-px): GDS cannot hold a bitmap, so the aligned microscope image is
-embedded as polygons: resampled to --photo-px um, colour-quantised to --photo-colors colours, one datatype
-per colour on --photo-layer (default 100/0..). writes.lyp groups them as "50x photo", drawn under the
-writes. NOT for exposure: send only layers 1..N (the writes) to the EBL.
+Optional photo overlay (--image + --warp-px): the microscope image saved as a KLayout image file (.lyimg:
+pixels + placement) using the fine-marker alignment, so the template markers in the photo sit on the GDS
+markers. Load it in KLayout over writes.gds / result.gds (File > Add Image..., choose the .lyimg).
 
 Writes come from params "ebl_writes" (list of {"name", "layers": [design layer keys]}); default is the
 dual-gated process:
@@ -16,7 +15,7 @@ dual-gated process:
   3 step3_final_etch   : L20            (fingers / graphene shaping)
 
 Usage: python export_writes.py --in result.gds --params params.json --out writes.gds \
-           [--image full_stack_raw.png --warp-px gds_warp_px.npy --photo-px 0.25 --photo-colors 16]
+           [--image full_stack_raw.png --warp-px gds_warp_px.npy [--image-out overlay.lyimg]]
 """
 import argparse
 import json
@@ -40,49 +39,37 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--in", dest="inp", required=True)
 ap.add_argument("--params", required=True)
 ap.add_argument("--out", required=True)
-ap.add_argument("--image", help="microscope image to embed as a photo overlay")
+ap.add_argument("--image", help="microscope image to save as a KLayout .lyimg overlay")
 ap.add_argument("--warp-px", help="2x3 affine: image px (col, row) -> GDS um (from fine_marker_align.py)")
-ap.add_argument("--photo-px", type=float, default=0.25, help="photo resolution in um")
-ap.add_argument("--photo-colors", type=int, default=16)
-ap.add_argument("--photo-layer", type=int, default=100)
+ap.add_argument("--image-out", help="overlay path (default: <out dir>/<image name>.lyimg)")
 a = ap.parse_args()
 
 
-def photo_regions(img_path, warp_path, px_um, ncol, dbu):
-    """Aligned image -> [(rgb, Region)] one per quantised colour, darkest first."""
-    import cv2
-    img = cv2.imread(img_path)
-    if img is None:
-        sys.exit("cannot read image %s" % img_path)
+def write_lyimg(img_path, warp_path, out_path):
+    """Save img_path as a KLayout image file (.lyimg) placed by the marker alignment warp.
+
+    warp: GDS um = M @ [col, row, 1] with pixel centres at integer (col, row) (fine_marker_align.py).
+    KLayout image coordinates: origin at the image centre, y up, pixel (col, row) centre at
+    (col + 0.5 - W/2, H/2 - row - 0.5)  (checked by rendering a one-pixel probe)."""
+    import klayout.lay as lay
     M = np.load(warp_path)
-    s = float(np.sqrt(abs(np.linalg.det(M[:, :2]))))           # um per image px
-    f = max(1, int(round(px_um / s)))
-    H, Wd = img.shape[:2]
-    small = cv2.resize(img, (Wd // f, H // f), interpolation=cv2.INTER_AREA)
-    h, w = small.shape[:2]
-    crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.5)
-    _, lab, cen = cv2.kmeans(small.reshape(-1, 3).astype(np.float32), ncol, None, crit, 3, cv2.KMEANS_PP_CENTERS)
-    lab = lab.reshape(h, w)
-    order = np.argsort(cen @ np.array([0.114, 0.587, 0.299]))       # BGR luminance, dark -> bright
-    # image px -> GDS: similarity, mirrored when det < 0 (ordinary y-down image -> y-up GDS)
-    mir = np.linalg.det(M[:, :2]) < 0
-    rot = np.degrees(np.arctan2(M[0, 1], M[0, 0])) if mir else np.degrees(np.arctan2(M[1, 0], M[0, 0]))
-    T = db.ICplxTrans(s / 2 / dbu, rot, bool(mir), db.Vector(M[0, 2] / dbu, M[1, 2] / dbu))   # input unit: half px
-    out = []
-    for k in order:
-        boxes = []
-        m = (lab == k)
-        for i in range(h):
-            row = np.concatenate(([0], m[i].astype(np.int8), [0]))
-            d = np.diff(row)
-            for j0, j1 in zip(np.where(d == 1)[0].tolist(), np.where(d == -1)[0].tolist()):
-                # small px (i, j) covers image px [j*f, (j+1)*f) x [i*f, (i+1)*f); pixel centres sit at integers
-                boxes.append(db.Box(2 * j0 * f - 1, 2 * i * f - 1, 2 * j1 * f - 1, 2 * (i + 1) * f - 1))
-        if boxes:
-            r = db.Region(boxes).merged().transformed(T).merged()
-            b, g, rr = (int(round(v)) for v in cen[k])
-            out.append(((rr, g, b), r))
-    return out, f * s
+    img = lay.Image(img_path)
+    W, H = img.width(), img.height()
+    A, t = M[:, :2], M[:, 2]
+    Ai = A @ np.diag([1.0, -1.0])                      # image y up -> row down
+    ti = A @ np.array([W / 2 - 0.5, H / 2 - 0.5]) + t
+    img.matrix = db.Matrix3d(Ai[0, 0], Ai[0, 1], ti[0], Ai[1, 0], Ai[1, 1], ti[1], 0.0, 0.0, 1.0)
+    img.write(out_path)
+    chk = lay.Image.read(out_path)                     # round trip: pixel (0, 0) and (W-1, H-1) land where the warp says
+    m = chk.matrix
+    for col, row in ((0, 0), (W - 1, H - 1)):
+        p = m.trans(db.DPoint(col + 0.5 - W / 2, H / 2 - row - 0.5))
+        q = M @ np.array([col, row, 1.0])
+        assert abs(p.x - q[0]) < 1e-6 and abs(p.y - q[1]) < 1e-6, ("lyimg placement mismatch", p, q)
+    return dict(lyimg=out_path, image=os.path.basename(img_path), size_px=[W, H],
+                um_per_px=round(float(np.sqrt(abs(np.linalg.det(A)))), 5),
+                corners_gds_um=[[round(float(v), 2) for v in M @ np.array([c, r, 1.0])] for c, r in ((0, 0), (W - 1, H - 1))])
+
 
 P = load_params(a.params)
 D = Design(a.inp, P)
@@ -102,29 +89,11 @@ for k, w in enumerate(writes, 1):
     top.shapes(out.layer(db.LayerInfo(k, 0, w["name"]))).insert(r)
     report.append(dict(layer="%d/0" % k, name=w["name"], from_layers=w["layers"],
                        polygons=r.count(), area_um2=round(r.area() * D.dbu * D.dbu, 1)))
-photo = []
-if a.image:
-    if not a.warp_px:
-        sys.exit("--image needs --warp-px")
-    photo, eff = photo_regions(a.image, a.warp_px, a.photo_px, a.photo_colors, D.dbu)
-    for d, (rgb, r) in enumerate(photo):
-        top.shapes(out.layer(db.LayerInfo(a.photo_layer, d, "photo_%02d" % d))).insert(r)
-    report.append(dict(layer="%d/0..%d" % (a.photo_layer, len(photo) - 1), name="50x photo (reference only, do not expose)",
-                       image=os.path.basename(a.image), pixel_um=round(eff, 4), colours=len(photo),
-                       polygons=sum(r.count() for _, r in photo)))
 opt = db.SaveLayoutOptions()
 opt.gds2_max_vertex_count = 4000          # keep every GDS record < 32 kB (other readers / EBL software)
 out.write(a.out, opt)
 
 lyp = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>", "<layer-properties>"]
-if photo:                                 # first in the list = painted first = underneath the writes
-    lyp += [" <properties>", "  <name>50x photo (reference only)</name>", "  <expanded>false</expanded>"]
-    for d, (rgb, _) in enumerate(photo):
-        c = "#%02x%02x%02x" % rgb
-        lyp += ["  <group-members>", "   <frame-color>%s</frame-color>" % c, "   <fill-color>%s</fill-color>" % c,
-                "   <dither-pattern>I0</dither-pattern>", "   <visible>true</visible>", "   <width>0</width>",
-                "   <name>photo_%02d</name>" % d, "   <source>%d/%d@1</source>" % (a.photo_layer, d), "  </group-members>"]
-    lyp.append(" </properties>")
 for k, w in enumerate(writes, 1):
     c = COLORS[(k - 1) % len(COLORS)]
     lyp += [" <properties>", "  <frame-color>%s</frame-color>" % c, "  <fill-color>%s</fill-color>" % c,
@@ -132,4 +101,14 @@ for k, w in enumerate(writes, 1):
             "  <name>%d %s</name>" % (k, w["name"]), "  <source>%d/0@1</source>" % k, " </properties>"]
 lyp.append("</layer-properties>")
 open(os.path.splitext(a.out)[0] + ".lyp", "w").write("\n".join(lyp) + "\n")
-print(json.dumps(dict(out=a.out, writes=report), indent=1))
+res = dict(out=a.out, writes=report)
+if a.image:
+    if not a.warp_px:
+        sys.exit("--image needs --warp-px")
+    res["overlay"] = write_lyimg(a.image, a.warp_px, a.image_out or os.path.join(
+        os.path.dirname(os.path.abspath(a.out)), os.path.splitext(os.path.basename(a.image))[0] + ".lyimg"))
+    rep = os.path.join(os.path.dirname(os.path.abspath(a.warp_px)), "gds_alignment_report.json")
+    if os.path.exists(rep):
+        q = json.load(open(rep)).get("quality", {})
+        res["overlay"]["marker_alignment"] = {k: q[k] for k in q if not isinstance(q[k], (list, dict))}
+print(json.dumps(res, indent=1))
