@@ -2,7 +2,7 @@
 
 Builds rectangular flakes (top-top hBN, top graphite, top hBN, graphene, bottom hBN, bottom
 graphite) on the chip template given by --template, then runs make_prepared -> build_device -> route_offline ->
-post_route -> etch_mask -> verify with params_synthetic.json. Exit 0 if every step passes.
+post_route -> etch_mask -> verify -> export_writes with params_synthetic.json. Exit 0 if every step passes.
 
 Usage: python selftest.py --template <chip template GDS> [--out <dir>] [--params <json>]   (instrMCPdev python)
 """
@@ -50,6 +50,7 @@ steps = [
     ("post_route", [os.path.join(HERE, "post_route.py"), "--in", O("routed.gds"), "--params", P, "--record", O("design.json"), "--out", O("post.gds")]),
     ("etch_mask", [os.path.join(HERE, "etch_mask.py"), "--in", O("post.gds"), "--params", P, "--out", O("result.gds")]),
     ("verify", [os.path.join(HERE, "verify.py"), "--gds", O("result.gds"), "--params", P, "--record", O("design.json"), "--out", O("verify.json")]),
+    ("export_writes", [os.path.join(HERE, "export_writes.py"), "--in", O("result.gds"), "--params", P, "--out", O("writes.gds")]),
 ]
 for name, cmd in steps:
     r = subprocess.run([PY] + cmd, capture_output=True, text=True)
