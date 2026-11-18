@@ -20,7 +20,14 @@ You need these before dispatching any subagent:
    - `top_part` 鈥?top flake on PDMS (before transfer)
    - `full_stack_raw` 鈥?assembled stack on SiO2
    - `full_stack_lut` 鈥?(optional) color-enhanced version of full_stack
-2. **Pixel size** 鈥?microns per pixel (e.g., 0.087 for 100x objective). Ask the user or check the image metadata.
+2. **Pixel size** 鈥?microns per pixel. Known values for our lab microscope (use these as the nominal value without asking when the image matches; always confirm against the template marker pitch):
+
+   | Objective | Image size (px) | Pixel size (µm/px) | Source |
+   |---|---|---|---|
+   | 50x | 3584 × 2748 | **0.06162** nominal (measured 0.06168 from marker pitch) | lab measurement (template marker pitch) |
+   | 100x | 2080 × 1544 | 0.087 | lab measurement |
+
+   The pixel size depends on the camera resolution as well as the objective, so check the image dimensions. Raw and LUT images of the same shot have the same pixel size. For anything not in the table, ask the user. Do not trust burned-in scale bars.
 3. **Mirror** 鈥?Does the top_part need mirroring? Yes if it was transferred from PDMS (the transfer flips it horizontally). Ask the user if unsure.
 4. **Output directory** 鈥?Where to write results. **If the user does not specify an output path, default to `<stack_image_dir>/output/`** (the directory containing the source images). Never use `/tmp` as the default output.
 

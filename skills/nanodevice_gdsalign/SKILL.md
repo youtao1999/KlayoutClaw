@@ -166,6 +166,7 @@ The `pixel_size` parameter (um/px) is critical for correct template rendering in
 | 100x | 0.05 |
 | 100x (alt) | 0.087 |
 | 50x | 0.1 |
+| 50x (our lab scope, 3584×2748 images) | **0.06162** (lab measurement; see `nanodevice_flakedetect` SKILL.md) |
 | 20x | 0.25 |
 | 10x | 0.5 |
 

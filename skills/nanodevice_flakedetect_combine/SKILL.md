@@ -169,6 +169,26 @@ Computes polygon intersection area between every (material_a, material_b) candid
 
 **When to run:** When a first-pass design session discovers the auto-picked material-A 脳 material-B pair has `overlap_um2 鈮?0`. The ranking surfaces a pair with non-trivial overlap without brute-force iteration. (Observed failure mode: ml09 / ml11 benchmarks where default graphene 脳 graphite had no overlap.)
 
+### combine_ingredients.py - one image per flake (dual-gated stacks)
+
+Use instead of transform.py when every flake has its own image (e.g. top-top hBN, top graphite,
+top hBN, graphene, bottom hBN, bottom graphite), each aligned to full_stack with its own warp
+(sweep.py + refine.py handle arbitrary rotation). Knows the extra materials `top_graphite` (14/0)
+and `top_top_hBN` (16/0); `graphite` stays the bottom graphite (13/0).
+
+```bash
+${PYTHON_PATH:-conda run -n instrMCPdev python} combine_ingredients.py \
+    --image <full_stack_raw> --pixel-size <um/px> --output-dir <out>/combine \
+    --item top_graphite=<mask.png>:<warp_top.npy> \
+    --item graphene=<mask.png>:<warp.npy> \
+    --item bottom_hBN=<mask_in_full_stack.png>          # no warp = already full_stack px
+```
+
+`MATERIAL=MASK[:WARP[:inv]]`: MASK is a binary PNG (or contour .npy) in the source image; WARP is
+2x3 source -> full_stack (add `:inv` for full_stack -> source matrices such as warp_sift_bottom.npy).
+Outputs `traces.json` (same format as transform.py, `stack`/`layer_map` list only the materials
+given), `<material>_full.png`, `overlay_raw.png`.
+
 ## Workflow
 
 Run in order:
