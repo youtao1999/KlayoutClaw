@@ -116,12 +116,13 @@ growth of R in mask.py (2 um), clearance from the stack below in checker.py (0.5
    eroded by `--margin` 0.5 um; printed as "seed ... um square"), draw a large checker
    there that also holds some bare substrate; otherwise 4/1 is cleared, the script says
    so, and the procedure goes on.
-   - Seed: the largest square in S (local frame, 0.1 um grid).
+   - Seed: the largest square in S (local frame, 0.1 um grid), cut to `--size`.
    - Growth: one grid step at a time inside R − ((TBN ∪ G ∪ BBN ∪ BG) grown by the margin),
      each side up to `--size` 10 um. Each step takes the direction whose new row/column
      holds the most S, then the most bare substrate. It stops when no step adds S and bare
      substrate is at least `--bare` 25% of W, or when it is blocked.
-   - Asserts W ⊆ R, W ∩ (TBN ∪ G ∪ BBN ∪ BG) = ∅, bare substrate in W > 0.
+   - Asserts W ⊆ R, W ∩ (TBN ∪ G ∪ BBN ∪ BG) = ∅. If W holds no bare substrate, 4/1 is
+     cleared and the procedure goes on, as when there is no seed.
    Seed, growth rule, numbers and layer are Claude's choices.
 2. **Top-gate etch mask** (7/0), `mask.py [--margin 2]`. M = R − (T ∪ W ∪ X),
    X = BG − (TG ∪ TBN ∪ G ∪ BBN).

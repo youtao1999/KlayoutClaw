@@ -25,10 +25,11 @@ Width: min(--width, island size - 0.1).
 
 Back-gate leads (--bg-leads, 2): same rules as the top-gate lead (head at the deepest point of the
 terminal); terminals: the largest pieces of the exposed bottom graphite X = BG − (TG ∪ TBN ∪ G ∪
-BBN) (kept under PMMA by the 7/0 mask), one lead per piece.
+BBN) (kept under PMMA by the 7/0 mask), one lead per piece. Only pieces wide enough for a lead count
+(bounding-box short side − 0.1 >= --min-width); thinner slivers are not terminals.
 
 Usage: python electrodes.py --flakes prepared.gds --params params.json --writes writes.gds
-                            [--width 0.8] [--inset 0.05] [--clear 1] [--tail-radius auto|<um>] [--tail-margin 30] [--bg-leads 2] [--layer 2/0]
+                            [--width 0.8] [--inset 0.05] [--clear 1] [--tail-radius auto|<um>] [--tail-margin 30] [--bg-leads 2] [--min-width 0.3] [--layer 2/0]
 """
 import argparse
 import math
@@ -50,6 +51,7 @@ ap.add_argument("--clear", type=float, default=1.0, help="um, stub runs this far
 ap.add_argument("--tail-radius", default="auto", help="um, circle of the lead tails around the channel centre, or auto")
 ap.add_argument("--tail-margin", type=float, default=30.0, help="um past the flakes' farthest bounding-box corner (auto radius)")
 ap.add_argument("--bg-leads", type=int, default=2, help="back-gate leads (user: the back gate has two)")
+ap.add_argument("--min-width", type=float, default=0.3, help="um, narrowest writable lead; thinner pieces of X are not terminals")
 ap.add_argument("--layer", default="2/0")
 a = ap.parse_args()
 
@@ -157,10 +159,11 @@ for isl in loc(I):
 lm = load_params(a.params)["layers"]
 F = lambda k: read_layer(a.flakes, "%d/%d" % tuple(lm[k]))[0]
 X = (F("graphite") - F("top_graphite") - F("top_hbn") - graphene(a.flakes, load_params(a.params))[0] - F("bottom_hbn")).merged()
-pieces = sorted(loc(X), key=lambda p: -p.area())
+pieces = sorted((p for p in loc(X) if min(p.bbox().width(), p.bbox().height()) - 0.1 >= a.min_width - 1e-9), key=lambda p: -p.area())
 if len(pieces) < a.bg_leads:
     # shortcut: one lead per piece of X; two heads on one piece are not implemented yet
-    sys.exit("need %d pieces of exposed bottom graphite for %d back-gate leads, found %d" % (a.bg_leads, a.bg_leads, len(pieces)))
+    sys.exit("need %d pieces of exposed bottom graphite at least %.2f um wide for %d back-gate leads, found %d"
+             % (a.bg_leads, a.min_width + 0.1, a.bg_leads, len(pieces)))
 for k, p in enumerate(pieces[:a.bg_leads]):
     terminal_lead(p, "back gate %d" % (k + 1))
 

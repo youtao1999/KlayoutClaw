@@ -110,10 +110,12 @@ the channel centre is nearest the island's; stub along an axis, `--clear` past t
 then straight to the tail.
 Back-gate leads (`--bg-leads` 2): as the top-gate leads, one per piece of X, largest pieces
 first; head at the deepest point of the piece (erode in 0.05 um steps until it vanishes).
-Fewer pieces than leads: the script stops (two heads on one piece not implemented yet).
+Only pieces wide enough for a lead count: bounding-box short side − 0.1 um at least
+`--min-width` 0.3 um; thinner slivers are not back-gate terminals.
+Fewer usable pieces than leads: the script stops (two heads on one piece not implemented yet).
 Every terminal lead (top-gate and back-gate) tries the four stub axes nearest the tail first
 and takes the first whose lead meets the stack (T ∪ BG) only on its terminal.
-Inset, clear, tail margin and 0.8 um are Claude's choices.
+Inset, clear, tail margin, 0.8 um and the 0.3 um minimum width are Claude's choices.
 
 ## Checks
 
@@ -122,7 +124,7 @@ Inset, clear, tail margin and 0.8 um are Claude's choices.
 2. each L touches exactly one terminal (arm, top-gate contact or piece of X). Pads are
    checked by `nanodevice_pads`.
 3. leads 0.5 um apart (none touch).
-4. lead width < its terminal's width.
+4. `--min-width` 0.3 um <= lead width < its terminal's width.
 5. L ∩ BG = ∅ for every lead but the back-gate leads, whose L ∩ BG ⊆ X; exactly
    `--bg-leads` (2) back-gate leads.
 

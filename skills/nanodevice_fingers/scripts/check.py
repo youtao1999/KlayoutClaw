@@ -8,7 +8,7 @@ P = T ∪ W ∪ X (as fingers.py), R' = bounding box of P grown by --margin, lea
    touches at most one electrode and does not touch P (slivers under 4 dbu wide, rounding
    along P's edge, are ignored).
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--frame 2]
 """
 import argparse
 import os
@@ -24,6 +24,7 @@ ap.add_argument("--flakes", required=True)
 ap.add_argument("--params", required=True)
 ap.add_argument("--writes", required=True)
 ap.add_argument("--margin", type=float, default=2.0)
+ap.add_argument("--frame", type=float, default=2.0, help="um around the flakes' bounding box (R, as fingers.py --frame)")
 ap.add_argument("--clear", type=float, default=0.25)
 ap.add_argument("--leads", default="2/0")
 ap.add_argument("--checker", default="4/1")
@@ -49,7 +50,7 @@ if not (M & P).is_empty():
     fails.append("1 M overlaps P by %.3f um2" % ((M & P).area() * dbu ** 2))
 if ((Ri - P) - M).area() * dbu ** 2 > 1e-3:            # 1e-3 um2: rounding slivers
     fails.append("1 %.3f um2 of R' - P not exposed" % (((Ri - P) - M).area() * dbu ** 2))
-R = db.Region(sum((F(k) for k in ["top_top_hbn", "top_graphite", "top_hbn", "graphene", "bottom_hbn", "graphite"]), db.Region()).bbox().enlarged(D.um(2.0)))   # as fingers.py --frame 2
+R = db.Region(sum((F(k) for k in ["top_top_hbn", "top_graphite", "top_hbn", "graphene", "bottom_hbn", "graphite"]), db.Region()).bbox().enlarged(D.um(a.frame)))
 cond = ((F("top_graphite") + G) & (R - Ri)).sized(D.um(a.margin)) & R
 fing = M - Ri - cond
 for k, L in enumerate(leads):

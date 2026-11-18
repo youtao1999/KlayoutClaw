@@ -8,12 +8,12 @@ X = exposed bottom graphite BG − (TG ∪ TBN ∪ G ∪ BBN), the back-gate ter
 2. L touches exactly one terminal (an arm, a top-gate contact or a piece of X). (Pads: checked by
    nanodevice_pads.)
 3. leads are --spacing apart from each other (none touch).
-4. lead width < its terminal's width (arm width, or top-gate contact size).
+4. --min-width (0.3) <= lead width < its terminal's width (arm width, or top-gate contact size).
 5. back gate: L ∩ BG = ∅ for every lead but the back-gate leads, whose L ∩ BG ⊆ X; exactly
    --bg-leads (2) back-gate leads.
 Sets are closed: A ∩ C, the island and the piece of X are grown by 1 dbu.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--spacing 0.5]
+Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--spacing 0.5] [--min-width 0.3]
 """
 import argparse
 import os
@@ -30,6 +30,7 @@ ap.add_argument("--params", required=True)
 ap.add_argument("--writes", required=True)
 ap.add_argument("--spacing", type=float, default=0.5)
 ap.add_argument("--bg-leads", type=int, default=2)
+ap.add_argument("--min-width", type=float, default=0.3)
 ap.add_argument("--layer", default="2/0")
 a = ap.parse_args()
 
@@ -71,6 +72,8 @@ for k, L in enumerate(leads):
             fails.append("3 leads %d and %d closer than %.2f um" % (m, k, a.spacing))
     if mine and paths[k].path_dwidth >= mine[0][0] - 1e-9:
         fails.append("4 lead %d: width %.2f not below its terminal width %.2f" % (k, paths[k].path_dwidth, mine[0][0]))
+    if paths[k].path_dwidth < a.min_width - 1e-9:
+        fails.append("4 lead %d: width %.2f below the minimum %.2f" % (k, paths[k].path_dwidth, a.min_width))
     if not is_bg and not (L & BG).is_empty():
         fails.append("5 lead %d: touches the bottom graphite, %.3f um2" % (k, (L & BG).area() * dbu ** 2))
     if is_bg and not ((L & BG) - X.sized(1)).is_empty():
@@ -78,7 +81,7 @@ for k, L in enumerate(leads):
 if nbg != a.bg_leads:
     fails.append("5 %d back-gate leads" % nbg)
 for n, name in [(1, "head in A ∩ C (arm), on its top-gate contact, or on exposed bottom graphite (back gate)"), (2, "one terminal"),
-                (3, "leads %.2f um apart" % a.spacing), (4, "width below terminal width"), (5, "only the back-gate leads touch the bottom graphite, inside X")]:
+                (3, "leads %.2f um apart" % a.spacing), (4, "width at least %.2f and below terminal width" % a.min_width), (5, "only the back-gate leads touch the bottom graphite, inside X")]:
     f = [x for x in fails if x.startswith("%d " % n)]
     print("%s %d. %s" % ("FAIL" if f else "PASS", n, name))
     for x in f:

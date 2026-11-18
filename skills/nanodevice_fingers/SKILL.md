@@ -78,4 +78,6 @@ for s in topgate contacts electrodes pads; do $P <KlayoutClaw>/skills/nanodevice
 3. no conductive debris piece touches two electrodes or P (slivers under 4 dbu wide,
    rounding along P's edge, are ignored).
 
+check.py takes the same `--margin`, `--frame` and `--clear` as fingers.py; pass the same values.
+
 A worked example on a real device is kept with the device data, not in this repo.

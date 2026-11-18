@@ -10,8 +10,8 @@ by --frame (as in mask.py).
 W (local frame) = the largest square in S as seed, grown one grid step at a time inside Q, each
 side up to --size: each step takes the direction whose new row/column holds the most S (then
 the most bare substrate), so W covers the stack part first; it stops when no step adds more
-S and bare substrate is at least --bare of W. W must hold bare substrate.
-Many stacks have no such region: then no checker is drawn (4/1 cleared), exit 0.
+S and bare substrate is at least --bare of W. The seed is cut to --size. W must hold bare substrate.
+Many stacks have no such region, or no such W: then no checker is drawn (4/1 cleared), exit 0.
 
 Usage: python checker.py --flakes prepared.gds --params params.json --writes writes.gds
                          [--margin 0.5] [--min-seed 1] [--size 10] [--bare 0.25] [--step 0.1] [--frame 2] [--layer 4/1]
@@ -79,15 +79,23 @@ def maxsquare(ok):
 
 x = lambda i: (org.x + i * s) * D.dbu
 y = lambda j: (org.y + j * s) * D.dbu
+
+
+def none(why):
+    write_layer(a.writes, a.layer, db.Region(), D.dbu)
+    print("no etch checker: " + why)
+    sys.exit(0)
+
+
 seed = maxsquare(grid(S.transformed(toL).sized(-m)))
 if seed is None or x(seed[2]) - x(seed[0]) < a.min_seed - 1e-9:
-    write_layer(a.writes, a.layer, db.Region(), D.dbu)
-    print("no etch checker: no top-top hBN + top graphite on bare substrate of at least %.1f um square" % a.min_seed)
-    sys.exit(0)
+    none("no top-top hBN + top graphite on bare substrate of at least %.1f um square" % a.min_seed)
 
 inQ, inS, cap = grid(Q), grid(S.transformed(toL)), int(round(a.size / a.step))
 inB = grid(db.Region(bb) - flakes.transformed(toL))             # bare substrate
 i0, j0, i1, j1 = seed
+i1, j1 = min(i1, i0 + cap), min(j1, j0 + cap)                    # seed side at most --size
+seed = (i0, j0, i1, j1)
 count = lambda g, cells: sum(g[j][i] for i, j in cells)
 while True:
     n = (i1 - i0 + 1) * (j1 - j0 + 1)
@@ -113,7 +121,8 @@ W = D.box(x(i0), y(j0), x(i1), y(j1))
 assert (W - M).is_empty() and (W & below).is_empty(), "checker leaves R or touches the stack below"
 um2 = lambda r: r.area() * D.dbu ** 2
 bare, stack = um2(W - flakes), um2(W & S)
-assert bare > 0, "checker holds no bare substrate"
+if bare <= 0:
+    none("no %.1f um checker around the top-top hBN + top graphite holds bare substrate" % a.size)
 write_layer(a.writes, a.layer, W, D.dbu)
 print("etch checker: x' %.2f..%.2f, y' %.2f..%.2f (%.2f x %.2f um, seed %.2f um square), %.2f um2: "
       "top-top hBN + top graphite %.2f, bare substrate %.2f, other %.2f -> %s"
