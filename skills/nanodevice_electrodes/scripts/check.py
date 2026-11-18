@@ -8,7 +8,8 @@ X = exposed bottom graphite BG − (TG ∪ TBN ∪ G ∪ BBN), the back-gate ter
 2. L touches exactly one terminal (an arm, a top-gate contact or a piece of X). (Pads: checked by
    nanodevice_pads.)
 3. leads are --spacing apart from each other (none touch).
-4. --min-width (0.3) <= lead width < its terminal's width (arm width, or top-gate contact size).
+4. --min-width (0.3) <= lead width < its terminal's width (arm width, top-gate contact size, or
+   for a piece of X 2 x its erosion depth, tg_lib.erode).
 5. back gate: L ∩ BG = ∅ for every lead but the back-gate leads, whose L ∩ BG ⊆ X; exactly
    --bg-leads (2) back-gate leads.
 Sets are closed: A ∩ C, the island and the piece of X are grown by 1 dbu.
@@ -22,7 +23,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, erode, graphene, layer, load_params, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -54,7 +55,8 @@ side = lambda p: min(D.local_bbox(p)[2] - D.local_bbox(p)[0], D.local_bbox(p)[3]
 terms = [(db.Region(p), D.local_bbox(p)[3] - D.local_bbox(p)[1], AC) for p in (arms - ch).each()]   # arms run along x'
 terms += [(db.Region(p), side(p), db.Region(p).sized(1)) for p in I.each()]           # (terminal, width, allowed head)
 nX = len(terms)
-terms += [(db.Region(p), side(p), db.Region(p).sized(1)) for p in X.each()]
+width = lambda p: 2 * erode(db.Region((D.Ti * p.to_dtype(dbu)).to_itype(dbu)), dbu)[1]   # local frame, as electrodes.py
+terms += [(db.Region(p), width(p), db.Region(p).sized(1)) for p in X.each()]
 fails = []
 nbg = 0
 for k, L in enumerate(leads):

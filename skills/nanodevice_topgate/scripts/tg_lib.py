@@ -30,6 +30,17 @@ def graphene(path, params):
     return union.merged(), active
 
 
+def erode(region, dbu, step=0.05):
+    """Erode region in step-um steps until it vanishes: (last non-empty region, depth in um).
+    2 x depth is the region's real width, whatever the angle of its edges."""
+    d, n = int(round(step / dbu)), 0
+    while True:
+        e = region.sized(-d)
+        if e.is_empty():
+            return region, n * step
+        region, n = e, n + 1
+
+
 CLEARANCE, ESCAPE = 0.3, 50.0      # um: distance kept from the arm corridors; corridor length
 
 

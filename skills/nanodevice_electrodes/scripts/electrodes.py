@@ -25,8 +25,9 @@ Width: min(--width, island size - 0.1).
 
 Back-gate leads (--bg-leads, 2): same rules as the top-gate lead (head at the deepest point of the
 terminal); terminals: the largest pieces of the exposed bottom graphite X = BG − (TG ∪ TBN ∪ G ∪
-BBN) (kept under PMMA by the 7/0 mask), one lead per piece. Only pieces wide enough for a lead count
-(bounding-box short side − 0.1 >= --min-width); thinner slivers are not terminals.
+BBN) (kept under PMMA by the 7/0 mask), one lead per piece. A piece's width is 2 x the depth it
+erodes to before vanishing (tg_lib.erode); only pieces with width − 0.1 >= --min-width count,
+thinner slivers are not terminals. Width: min(--width, piece width - 0.1).
 
 Usage: python electrodes.py --flakes prepared.gds --params params.json --writes writes.gds
                             [--width 0.8] [--inset 0.05] [--clear 1] [--tail-radius auto|<um>] [--tail-margin 30] [--bg-leads 2] [--min-width 0.3] [--layer 2/0]
@@ -39,7 +40,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, erode, graphene, layer, load_params, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -112,30 +113,26 @@ stack = (T + D.R("graphite")).merged()                           # a lead may me
 
 
 def deepest(poly):
-    """A point deep inside a DPolygon: erode in 0.05 um steps until it vanishes; centre of the last piece."""
-    r = db.Region(poly.to_itype(dbu))
-    while True:
-        e = r.sized(-D.um(0.05))
-        if e.is_empty():
-            break
-        r = e
+    """A point deep inside a DPolygon and its width: erode in 0.05 um steps until it vanishes;
+    centre of the last piece, 2 x the erosion depth."""
+    r, depth = erode(db.Region(poly.to_itype(dbu)), dbu)
     p = max(r.each(), key=lambda q: q.area())
     c = p.bbox().center()
-    return (c if p.inside(c) else next(p.each_point_hull())).to_dtype(dbu)
+    return (c if p.inside(c) else next(p.each_point_hull())).to_dtype(dbu), 2 * depth
 
 
-def terminal_lead(poly, name):
+def terminal_lead(poly, name, bg=False):
     """Lead from deep inside a terminal (DPolygon, local frame) to the free tail nearest in
     direction from the channel centre: stub along an axis, --clear past the terminal's bounding
     box, then straight to the tail. Axes are tried nearest the tail first; the first whose lead
     meets the stack (T ∪ BG) only on the terminal is taken."""
     b = poly.bbox()
-    c = deepest(poly)
+    c, width = deepest(poly)
     want = math.atan2(c.y - cc.y, c.x - cc.x)
     end = min(free_tails, key=lambda p: abs(math.remainder(ang(p) - want, 2 * math.pi)))
     free_tails.remove(end)
     d = end - c
-    w = min(a.width, min(b.width(), b.height()) - 0.1)
+    w = min(a.width, (width if bg else min(b.width(), b.height())) - 0.1)
     ok = db.Region((D.T * poly).to_itype(dbu)).sized(1)
     stubs = [db.DPoint(b.left - a.clear, c.y), db.DPoint(b.right + a.clear, c.y),
              db.DPoint(c.x, b.bottom - a.clear), db.DPoint(c.x, b.top + a.clear)]
@@ -159,13 +156,13 @@ for isl in loc(I):
 lm = load_params(a.params)["layers"]
 F = lambda k: read_layer(a.flakes, "%d/%d" % tuple(lm[k]))[0]
 X = (F("graphite") - F("top_graphite") - F("top_hbn") - graphene(a.flakes, load_params(a.params))[0] - F("bottom_hbn")).merged()
-pieces = sorted((p for p in loc(X) if min(p.bbox().width(), p.bbox().height()) - 0.1 >= a.min_width - 1e-9), key=lambda p: -p.area())
+pieces = sorted((p for p in loc(X) if deepest(p)[1] - 0.1 >= a.min_width - 1e-9), key=lambda p: -p.area())
 if len(pieces) < a.bg_leads:
     # shortcut: one lead per piece of X; two heads on one piece are not implemented yet
     sys.exit("need %d pieces of exposed bottom graphite at least %.2f um wide for %d back-gate leads, found %d"
              % (a.bg_leads, a.min_width + 0.1, a.bg_leads, len(pieces)))
 for k, p in enumerate(pieces[:a.bg_leads]):
-    terminal_lead(p, "back gate %d" % (k + 1))
+    terminal_lead(p, "back gate %d" % (k + 1), bg=True)
 
 ly = db.Layout()
 ly.read(a.writes)
