@@ -53,7 +53,9 @@ cc = D.T * db.DPoint((cx1 + cx2) / 2, (cy1 + cy2) / 2)          # channel centre
 flakes = db.Region()
 for k in FLAKES:
     flakes += read_layer(a.flakes, "%d/%d" % tuple(P["layers"][k]))[0]
-keep_out = db.Region(flakes.bbox()).sized(D.um(a.clear))
+# grown with its corners cut (sizing mode 1): about --clear from F in every direction, as the
+# electrodes' tail circle is; square corners reach --clear x sqrt 2 and can hold a tentacle tip
+keep_out = db.Region(flakes.bbox()).sized(D.um(a.clear), 1)
 
 ly = db.Layout()
 ly.read(a.writes)

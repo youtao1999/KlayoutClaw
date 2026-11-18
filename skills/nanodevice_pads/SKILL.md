@@ -36,7 +36,8 @@ Pads Bₖ and tentacles Kₖ (2/1), leads Lₖ (2/0) with tails tₖ, F = boundi
 - Kₖ is a trapezoid; tₖ ∈ Kₖ; Kₖ ∩ Bₖ ≠ ∅; Kₖ ∩ Bⱼ = ∅ (j ≠ k)
 - (Bₖ ∪ Kₖ) ∩ Lⱼ = ∅ for j ≠ k (each pad connects to exactly its own lead)
 - Bₖ, Bⱼ 20 um apart; Kₖ 20 um from Kⱼ and Bⱼ (j ≠ k)
-- (Bₖ ∪ Kₖ) ∩ (F grown by 20 um) = ∅ (spread around the stack, clear of it)
+- (Bₖ ∪ Kₖ) ∩ (F grown by 20 um, corners cut) = ∅ (spread around the stack, clear of it;
+  cut corners keep about 20 um from F at the corners too, not 20 × √2)
 Numbers are Claude's choices.
 
 ## Glossary

@@ -17,7 +17,11 @@ def layer(spec):
 def read_layer(path, spec):
     ly = db.Layout()
     ly.read(path)
-    return db.Region(ly.top_cell().begin_shapes_rec(ly.layer(*layer(spec)))).merged(), ly.dbu
+    # insert() copies the shapes; Region(iterator) would keep a lazy reference to ly, which is
+    # freed on return (an already-merged region, e.g. one box, then reads back empty)
+    r = db.Region()
+    r.insert(ly.top_cell().begin_shapes_rec(ly.layer(*layer(spec))))
+    return r.merged(), ly.dbu
 
 
 def graphene(path, params):

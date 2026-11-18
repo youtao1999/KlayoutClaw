@@ -39,7 +39,9 @@ for k in FLAKES:
 ly = db.Layout()
 ly.read(a.writes)
 dbu = ly.dbu
-keep_out = db.Region(flakes.bbox()).sized(D.um(a.clear))
+# grown with its corners cut (sizing mode 1): about --clear from F in every direction, as the
+# electrodes' tail circle is; square corners reach --clear x sqrt 2 and can hold a tentacle tip
+keep_out = db.Region(flakes.bbox()).sized(D.um(a.clear), 1)
 paths = [s.dpath for s in ly.top_cell().shapes(ly.layer(*layer(a.leads))).each() if s.is_path()]
 leads = [db.Region(p.to_itype(dbu).polygon()) for p in paths]
 tails = [list(p.each_point())[-1].to_itype(dbu) for p in paths]
