@@ -38,6 +38,6 @@ def test_default_is_exposed_bottom_graphite_only(device):
 def test_edge_contact_adds_bottom_graphite_under_bottom_hbn(device):
     flakes, writes = device
     x = bg_terminal(flakes, {"layers": LAYERS, "back_gate": {"edge_contact": True, "gap": 0.5}}, writes)
-    expect = box(-1, -5, 1, 15) - box(-0.5, 0, 0.5, 10).sized(500)
+    expect = box(-1, -5, 1, -0.5) + box(-1, 10.5, 1, 15)
     assert (x ^ expect).is_empty()
 

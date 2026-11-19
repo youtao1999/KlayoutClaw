@@ -4,7 +4,7 @@ deviate from it (a flake can be dropped turned 180 deg). The best fit at least 9
 too; when its cost is within --ambiguous of the best, the script stops with exit code 3 and the operator
 decides (pin the rotation with "rot_range" in that flake's entry).
 
-Usage: python fit.py --params <device>/klayoutclaw/data/params.json [--only top_hBN ...] [--ambiguous 0.15]
+Usage: python fit.py --params <device>/klayoutclaw/data/params.json [--ambiguous 0.15]
 prepare.flakes: {role: {"gds": "ingredients/BN001a.gds", "layer": [20, 0]} | {"image": "<alpha png>"} |
                  {"polygon_px": [[x, y], ...]}, optional "scale", "rot_range": [lo, hi]}
 prepare.region_px: [x0, y0, x1, y1], where the stack lies in the photo (default: whole photo).
@@ -21,7 +21,6 @@ from prep_lib import Prep, edge_dist, fit, record, source_mask, warp
 ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument("--params", required=True)
 ap.add_argument("--device")
-ap.add_argument("--only", nargs="*")
 ap.add_argument("--ambiguous", type=float, default=0.15, help="warn when the alternative's cost is within this fraction of the best")
 a = ap.parse_args()
 p = Prep(a)
@@ -31,8 +30,6 @@ region = tuple(p.c.get("region_px", (0, 0, W, H)))
 dt, _ = edge_dist(im, 25.0)
 summary, warn = {}, []
 for role, spec in p.c["flakes"].items():
-    if a.only and role not in a.only:
-        continue
     if "polygon_px" in spec:                           # traced in the photo already
         p.save(role, dict(role=role, polygon_px=spec["polygon_px"], source="polygon_px"))
         summary[role] = "traced in the photo"

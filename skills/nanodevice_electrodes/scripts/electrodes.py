@@ -170,11 +170,12 @@ for i, (p, _, bg) in enumerate(terms):
         got = route(p, end, bg)
         if got and all((reg(got[0]).sized(gap) & o).is_empty() for o in arm_regs):
             cand[i, j] = got + (reg(got[0]),)
-clash = lambda u, v: not (cand[u][2].sized(gap) & cand[v][2]).is_empty()
+grown = {k: c[2].sized(gap) for k, c in cand.items()}
+clash = {(u, v): not (grown[u] & cand[v][2]).is_empty() for u in cand for v in cand if u[0] > v[0] and u[1] != v[1]}
 best = None
 for perm in itertools.permutations(range(len(free_tails)), len(terms)):
     keys = list(enumerate(perm))
-    if any(k not in cand for k in keys) or any(clash(keys[x], keys[y]) for x in range(len(keys)) for y in range(x)):
+    if any(k not in cand for k in keys) or any(clash[keys[x], keys[y]] for x in range(len(keys)) for y in range(x)):
         continue
     total = sum(plen(cand[k][0]) for k in keys)
     if best is None or total < best[0]:

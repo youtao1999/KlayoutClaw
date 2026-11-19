@@ -1,10 +1,11 @@
 """Deliverables of a finished six-piece design, in <device>/klayoutclaw/ (the folder above data/):
-  writes.gds    only the EBL write layers (default 7/0 top-gate etch mask, 4/0 contacts, 4/1 etch checker,
+  writes.gds    only the EBL write layers (7/0 top-gate etch mask, 4/0 contacts, 4/1 etch checker if any,
                 2/0 electrodes, 2/1 big pads), taken from result.gds: the file sent to the EBL. + writes.lyp
   result.lyp    layer names for result.gds, the design file the skills built (template, the flakes as they
                 landed, every design layer). The stack plan (design.gds) is never written.
   <photo>.lyimg the full-stack photo placed by the marker alignment (data/gds_warp_px.npy), when present.
-Exports only a design whose final check passed (data/record.json, finalcheck/check); --force overrides.
+Exports only a design whose final check passed on the current result.gds and prepared.gds (data/record.json,
+finalcheck/check, with their sha256); --force overrides.
 
 Usage: python export.py --flakes data/prepared.gds --params data/params.json --writes result.gds
 """
@@ -17,7 +18,7 @@ import klayout.db as db
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import parse, record  # noqa: E402
+from tg_lib import parse, record, sha256  # noqa: E402
 
 NAMES = {(7, 0): "top-gate etch mask (deep, to the bottom hBN)", (4, 0): "contacts (shallow, to the top hBN)",
          (4, 1): "etch checker", (2, 0): "electrodes (fine metal, small current)", (2, 1): "big pads (large current)",
@@ -32,7 +33,6 @@ ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDe
 ap.add_argument("--flakes", required=True)
 ap.add_argument("--params", required=True)
 ap.add_argument("--writes", required=True, help="result.gds, the file the skills built")
-ap.add_argument("--ebl", nargs="+", default=["7/0", "4/0", "4/1", "2/0", "2/1"], help="EBL write layers for writes.gds")
 ap.add_argument("--force", action="store_true", help="export although the final check did not pass")
 a = parse(ap, "finalcheck/export")
 
@@ -40,10 +40,13 @@ data = os.path.dirname(os.path.abspath(a.params))
 out = os.path.dirname(data)
 rec_path = os.path.join(data, "record.json")
 verdict = json.load(open(rec_path)).get("finalcheck/check", {}) if os.path.exists(rec_path) else {}
-if not verdict.get("passed") and not a.force:
-    sys.exit("final check has not passed (record.json finalcheck/check): run nanodevice_finalcheck first, or --force")
+if not a.force:
+    if not verdict.get("passed"):
+        sys.exit("final check has not passed (record.json finalcheck/check): run nanodevice_finalcheck first, or --force")
+    if verdict.get("sha256") != {"writes": sha256(a.writes), "flakes": sha256(a.flakes)}:
+        sys.exit("%s or %s changed since the final check passed: rerun the final check, or --force"
+                 % (os.path.basename(a.writes), os.path.basename(a.flakes)))
 
-spec = lambda s: tuple(int(v) for v in s.split("/"))
 des = db.Layout()
 des.read(a.writes)
 dtop = des.top_cell()
@@ -77,7 +80,7 @@ if os.path.abspath(a.writes) == os.path.abspath(os.path.join(out, "writes.gds"))
 w = db.Layout()
 w.dbu = des.dbu
 wtop = w.create_cell("TOP")
-ebl = [spec(s) for s in a.ebl]
+ebl = [(7, 0), (4, 0), (4, 1), (2, 0), (2, 1)]
 for k in ebl:
     if k in dlay:
         wtop.shapes(w.layer(*k)).insert(dtop.shapes(dlay[k]))

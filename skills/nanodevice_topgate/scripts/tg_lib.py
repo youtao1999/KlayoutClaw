@@ -1,5 +1,6 @@
 """Shared helpers for the top-gate scripts: the recipe's Design (local strip frame) and layer I/O."""
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -54,6 +55,11 @@ def record(params_path, step, **fields):
     with open(path + ".part", "w") as f:
         json.dump(r, f, indent=1)
     os.replace(path + ".part", path)
+
+
+def sha256(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
 
 
 def layer(spec):

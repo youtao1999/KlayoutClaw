@@ -2,7 +2,7 @@
 -> _electrodes -> _pads -> _fingers -> _finalcheck (check, export). After each skill the checks of every
 earlier skill run again (each must still pass). Stops at the first failing step; --from resumes there.
 
-Usage: python run.py --params <device>/klayoutclaw/data/params.json [--from STEP] [--to STEP] [--list]
+Usage: python run.py --params <device>/klayoutclaw/data/params.json [--from STEP] [--list]
 Steps are named <skill>/<script>, e.g. prepare/fit, topgate/place, finalcheck/export.
 Works in <device>/klayoutclaw: data/prepared.gds (flakes), result.gds (design file), writes.gds (EBL).
 """
@@ -27,7 +27,6 @@ STEPS += ["finalcheck/check", "finalcheck/export"]
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("--params", required=True)
 ap.add_argument("--from", dest="start", help="first step to run")
-ap.add_argument("--to", dest="stop", help="last step to run")
 ap.add_argument("--list", action="store_true", help="print the steps and exit")
 a = ap.parse_args()
 if a.list:
@@ -35,12 +34,9 @@ if a.list:
     sys.exit(0)
 params = Path(a.params).resolve()
 work = params.parent.parent                          # <device>/klayoutclaw
-for s in (a.start, a.stop):
-    if s and s not in STEPS:
-        sys.exit("unknown step %s (see --list)" % s)
-i0 = STEPS.index(a.start) if a.start else 0
-i1 = STEPS.index(a.stop) if a.stop else len(STEPS) - 1
-for k, step in enumerate(STEPS[i0:i1 + 1], i0):
+if a.start and a.start not in STEPS:
+    sys.exit("unknown step %s (see --list)" % a.start)
+for step in STEPS[STEPS.index(a.start) if a.start else 0:]:
     skill, script = step.split("/")
     path = SKILLS / ("nanodevice_" + skill) / "scripts" / (script + ".py")
     cmd = [sys.executable, str(path), "--params", str(params)]

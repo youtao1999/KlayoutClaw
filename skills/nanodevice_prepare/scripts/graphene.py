@@ -7,8 +7,8 @@ stack deviated from the plan there (see the device's deviation note) or that fit
 
 Usage: python graphene.py --params <device>/klayoutclaw/data/params.json
 prepare.graphene: {"design": "design.gds", "cell": "<optional; default the last S<n>_ step cell>",
-  "picked_by": "top_hBN", "picked_by_layer": [40, 0], "pieces_layer": [2, 0], "active_layer": [60, 0],
-  "plan_um_per_px": 0.06173, "clip": true, "compare": {"bottom_hBN": [50, 0]}}
+  "picked_by": "top_hBN", "picked_by_layer": [40, 0], "pieces_layer": [2, 0], "compare": {"bottom_hBN": [50, 0]}}
+The pieces are clipped to the flake that picked them up; the plan's pixel size is PLAN_UM_PER_PX.
 Writes data/prepare/graphene.json (pieces and active region in photo px) and work/prepare/graphene.png.
 """
 import re
@@ -20,6 +20,8 @@ import numpy as np
 from scipy.optimize import minimize
 
 from prep_lib import Prep, args, record, source_mask, warp
+
+PLAN_UM_PER_PX = 0.06173                       # catalog / stack-plan pixel size
 
 a = args(__doc__)
 p = Prep(a)
@@ -41,7 +43,7 @@ def polys(spec, merge=True):
 
 
 def T_of(x):            # plan um (y up) -> photo px (y down): rotation x[0] deg, translation x[1:3]
-    t, s = np.radians(x[0]), 1.0 / g.get("plan_um_per_px", 0.06173)
+    t, s = np.radians(x[0]), 1.0 / PLAN_UM_PER_PX
     return np.c_[s * np.array([[np.cos(t), -np.sin(t)], [np.sin(t), np.cos(t)]]) @ np.diag([1, -1]), x[1:3]]
 
 
@@ -81,20 +83,19 @@ amask = fitted(anchor)
 T, theta, a_iou = frame(polys(tuple(g.get("picked_by_layer", [40, 0]))), amask)
 px = lambda ps: [(q @ T[:, :2].T + T[:, 2]).tolist() for q in ps]
 pieces = px(polys(tuple(g.get("pieces_layer", [2, 0])), merge=False))   # insertion order = piece 1, 2, ...
-if g.get("clip", True):                                # graphene stays inside the flake that picked it up
-    clipped = []
-    for q in pieces:
-        m = np.zeros((H, W), np.uint8)
-        cv2.fillPoly(m, [np.round(np.array(q)).astype(np.int32)], 1)
-        cs, _ = cv2.findContours((m & amask) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        clipped.append(cv2.approxPolyDP(max(cs, key=cv2.contourArea), 1.0, True).reshape(-1, 2).astype(float).tolist())
-    pieces = clipped
+clipped = []                                           # graphene stays inside the flake that picked it up
+for q in pieces:
+    m = np.zeros((H, W), np.uint8)
+    cv2.fillPoly(m, [np.round(np.array(q)).astype(np.int32)], 1)
+    cs, _ = cv2.findContours((m & amask) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    clipped.append(cv2.approxPolyDP(max(cs, key=cv2.contourArea), 1.0, True).reshape(-1, 2).astype(float).tolist())
+pieces = clipped
 act = np.ones((H, W), np.uint8)
 for q in pieces:
     m = np.zeros((H, W), np.uint8)
     cv2.fillPoly(m, [np.round(np.array(q)).astype(np.int32)], 1)
     act &= m
-um_px = abs(np.linalg.det(np.load(p.data / "gds_warp_px.npy")[:, :2])) if (p.data / "gds_warp_px.npy").exists() else g.get("plan_um_per_px", 0.06173) ** 2
+um_px = abs(np.linalg.det(np.load(p.data / "gds_warp_px.npy")[:, :2])) if (p.data / "gds_warp_px.npy").exists() else PLAN_UM_PER_PX ** 2
 compare = {}
 for role, spec in g.get("compare", {}).items():
     if role in p.c["flakes"]:

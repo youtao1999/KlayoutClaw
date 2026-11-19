@@ -27,7 +27,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import bg_terminal, graphene, layer, load_params, parse, read_layer, record  # noqa: E402
+from tg_lib import bg_terminal, graphene, layer, load_params, parse, read_layer, record, sha256  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -92,5 +92,6 @@ print("%s 4. no electrodes shorted together%s" % ("PASS" if ok4 else "FAIL",
 print("electrodes: %s; debris pieces %d" % (", ".join("%d %s" % (sum(n == r for n, _ in electrodes), r)
       for r in ("graphene", "top gate", "back gate")), len(debris)))
 record(a.params, "finalcheck/check", passed=not fails and ok4, failed=fails + ([] if ok4 else ["4"]),
-       electrodes={r: sum(n == r for n, _ in electrodes) for r in ("graphene", "top gate", "back gate")})
+       electrodes={r: sum(n == r for n, _ in electrodes) for r in ("graphene", "top gate", "back gate")},
+       sha256={"writes": sha256(a.writes), "flakes": sha256(a.flakes)})
 sys.exit(1 if fails or not ok4 else 0)

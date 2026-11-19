@@ -57,10 +57,11 @@ $P <KlayoutClaw>/skills/nanodevice_finalcheck/scripts/export.py $A    # only aft
 ```
 
 **Export** (`export.py`): writes the deliverables next to result.gds. `writes.gds` holds only the EBL
-write layers (`--ebl`, default 7/0, 4/0, 4/1, 2/0, 2/1: the file sent to the EBL) with `writes.lyp`;
+write layers (7/0, 4/0, 4/1 if any, 2/0, 2/1: the file sent to the EBL) with `writes.lyp`;
 `result.lyp` names the layers of result.gds (template, the flakes where they landed, every design
 layer: the file to review); `<photo>.lyimg` is the full-stack photo placed by the marker alignment.
-It refuses a design whose final check has not passed (`--force` overrides). The stack plan
+It refuses a design whose final check has not passed, or whose result.gds or prepared.gds changed
+since it passed (check.py records their sha256 with the verdict; `--force` overrides). The stack plan
 `design.gds` is never written.
 Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the `instrMCPdev` conda env; run under `bash -c` (zsh does not split `$A`).
 
