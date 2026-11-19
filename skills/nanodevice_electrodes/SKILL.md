@@ -21,6 +21,9 @@ set relation. One skill per process step: this one is the fine metal write (2/0)
 
 ## Inputs and scope
 
+Arguments can also come from `data/params.json` `args` (block `electrodes/<script>`); effective arguments
+and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
+
 All in the device folder's `klayoutclaw/`:
 - `writes.gds` with the top gate (5/0-5/3, 11/4, flake copies) from `nanodevice_topgate`
   and the etch mask 7/0, contacts 4/0 and etch checker 4/1 from

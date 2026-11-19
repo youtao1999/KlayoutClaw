@@ -23,7 +23,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, bg_terminal, erode, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, bg_terminal, erode, graphene, layer, load_params, parse, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -33,7 +33,7 @@ ap.add_argument("--spacing", type=float, default=0.5)
 ap.add_argument("--bg-leads", type=int, default=2)
 ap.add_argument("--min-width", type=float, default=0.3)
 ap.add_argument("--layer", default="2/0")
-a = ap.parse_args()
+a = parse(ap, "electrodes/electrodes", check=True)
 
 D = Design(a.flakes, load_params(a.params))
 R = lambda s: read_layer(a.writes, s)[0]

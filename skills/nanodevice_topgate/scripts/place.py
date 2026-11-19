@@ -22,7 +22,7 @@ import subprocess
 import sys
 import tempfile
 
-from tg_lib import Design, load_params, read_layer
+from tg_lib import NO_RECORD, Design, load_params, parse, read_layer, record
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
@@ -38,7 +38,7 @@ ap.add_argument("--max-size", type=float, default=1.0)
 ap.add_argument("--size-step", type=float, default=0.05)
 ap.add_argument("--shift-step", type=float, default=0.01)
 ap.add_argument("--electrode-width", type=float, default=0.5)
-a = ap.parse_args()
+a = parse(ap, "topgate/place")
 
 ch, _ = read_layer(a.writes, "5/0")
 if ch.count() != 1:
@@ -52,7 +52,8 @@ if half < 0:
 def run(script, writes, *extra):
     cmd = [sys.executable, os.path.join(HERE, script), "--flakes", a.flakes, "--params", a.params,
            "--writes", writes] + [str(x) for x in extra]
-    return subprocess.run(cmd, capture_output=True, text=True)
+    env = dict(os.environ, **({} if writes == a.writes else {NO_RECORD: "1"}))   # trials leave no record
+    return subprocess.run(cmd, capture_output=True, text=True, env=env)
 
 
 def design(writes, size, shift):
@@ -78,6 +79,7 @@ try:
 
     q = lambda x: round(x / a.shift_step) * a.shift_step
     choice = None
+    table = {}
     size = a.max_size
     while size >= a.electrode_width + 0.1 - 1e-9 and choice is None:
         coarse = {q(-half + k * 0.05) for k in range(int(2 * half / 0.05) + 1)} | {q(-half), q(half)}
@@ -112,6 +114,7 @@ try:
         best = max(runs, key=lambda r: r[-1] - r[0], default=None)
         width = best[-1] - best[0] if best else -1
         print("size %.3f: passing shifts %s" % (size, ", ".join("%.2f..%.2f" % (r[0], r[-1]) for r in runs) or "none"))
+        table["%.3f" % size] = [[r[0], r[-1]] for r in runs]
         if best and width >= a.min_window - 1e-9:
             choice = (size, q((best[0] + best[-1]) / 2), best)
         size = round(size - a.size_step, 6)
@@ -119,6 +122,8 @@ try:
         sys.exit("no contact size has a passing shift run >= %.3f um" % a.min_window)
     size, shift, best = choice
     print("chosen: contact size %.3f um, arm shift %.3f um (middle of %.2f..%.2f)" % (size, shift, best[0], best[-1]))
+    record(a.params, "topgate/place", chosen={"contact_size": size, "arm_shift": shift, "passing_run": [best[0], best[-1]]},
+           passing_shifts=table)
     failed = design(a.writes, size, shift)
     r = run("check.py", a.writes)
     print(r.stdout, end="")

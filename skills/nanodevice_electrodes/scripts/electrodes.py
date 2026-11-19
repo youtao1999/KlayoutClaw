@@ -41,7 +41,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, bg_terminal, erode, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, bg_terminal, erode, graphene, layer, load_params, parse, read_layer, record  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -57,7 +57,7 @@ ap.add_argument("--tail-margin", type=float, default=30.0, help="um past the fla
 ap.add_argument("--bg-leads", type=int, default=2, help="back-gate leads (user: the back gate has two)")
 ap.add_argument("--min-width", type=float, default=0.3, help="um, narrowest writable lead; thinner pieces of X are not terminals")
 ap.add_argument("--layer", default="2/0")
-a = ap.parse_args()
+a = parse(ap, "electrodes/electrodes")
 
 D = Design(a.flakes, load_params(a.params))
 ch, dbu = read_layer(a.writes, "5/0")
@@ -197,4 +197,6 @@ opt = db.SaveLayoutOptions()
 opt.format = "GDS2"
 ly.write(a.writes + ".part", opt)
 os.replace(a.writes + ".part", a.writes)
+record(a.params, "electrodes/electrodes", tail_radius=round(rad, 3), tail_slots=slots,
+       leads=[{"path": [[round(p.x, 3), round(p.y, 3)] for p in dp.each_point()], "width": dp.width} for dp in leads])
 print("%d leads -> %s" % (len(leads), a.layer))

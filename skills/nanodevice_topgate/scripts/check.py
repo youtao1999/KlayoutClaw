@@ -18,7 +18,7 @@ import sys
 
 import klayout.db as db
 
-from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, graphene, load_params, read_layer
+from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, graphene, load_params, parse, read_layer
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True, help="GDS with the bottom graphite, for the local frame")
@@ -30,7 +30,7 @@ ap.add_argument("--contacts", default="5/2")
 ap.add_argument("--electrodes", default="5/3")
 ap.add_argument("--clearance", type=float, default=CLEARANCE)
 ap.add_argument("--escape", type=float, default=ESCAPE)
-a = ap.parse_args()
+a = parse(ap, "topgate/check", check=True)
 
 P = load_params(a.params)
 lm = P["layers"]

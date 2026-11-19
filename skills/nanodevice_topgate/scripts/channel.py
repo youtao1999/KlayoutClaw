@@ -11,14 +11,14 @@ The channel layer in writes.gds is replaced; every other layer is left as it is.
 import argparse
 import sys
 
-from tg_lib import Design, load_params, write_layer
+from tg_lib import Design, load_params, parse, record, write_layer
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
 ap.add_argument("--params", required=True)
 ap.add_argument("--writes", required=True)
 ap.add_argument("--layer", default="5/0")
-a = ap.parse_args()
+a = parse(ap, "topgate/channel")
 
 P = load_params(a.params)
 D = Design(a.flakes, P)
@@ -33,6 +33,7 @@ ch = D.box(x1, y1, x2, y2)
 assert (ch - D.R("graphite")).is_empty(), "channel leaves the bottom graphite"
 
 write_layer(a.writes, a.layer, ch, D.dbu)
+record(a.params, "topgate/channel", x=[round(x1, 4), round(x2, 4)], y=[y1, y2], width=round(x2 - x1, 4))
 print("channel %s local x' [%.3f, %.3f] y' [%.3f, %.3f]  width %.3f um  length %.3f um  area %.3f um2"
       % (a.layer, x1, x2, y1, y2, x2 - x1, y2 - y1, ch.area() * D.dbu ** 2))
 print("frame", D.frame)

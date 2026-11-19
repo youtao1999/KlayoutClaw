@@ -24,7 +24,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, layer, load_params, parse, read_layer, record  # noqa: E402
 
 FLAKES = ["top_top_hbn", "top_graphite", "top_hbn", "graphene", "bottom_hbn", "graphite"]
 
@@ -43,7 +43,7 @@ ap.add_argument("--gap", type=float, default=20.0, help="um between pads, and be
 ap.add_argument("--clear", type=float, default=20.0, help="um, pads and tentacles stay this far from the flakes' bounding box")
 ap.add_argument("--leads", default="2/0")
 ap.add_argument("--layer", default="2/1")
-a = ap.parse_args()
+a = parse(ap, "pads/pads")
 
 P = load_params(a.params)
 D = Design(a.flakes, P)
@@ -129,5 +129,6 @@ for t, (pad, tent) in zip(tails, ps):
     print("tail (%.1f, %.1f): pad (%.1f, %.1f; %.1f, %.1f), tentacle %.1f um along %s"
           % (t.x, t.y, pad.left, pad.bottom, pad.right, pad.top,
              tent.bbox().width() if along_x else tent.bbox().height(), "x" if along_x else "y"))
+record(a.params, "pads/pads", pads=len(ps), inner_edge_radius=r, tail_radius=round(rt, 3))
 print("%d pads %.0f x %.0f um, inner edges at %.0f um from the channel centre (tails at %.0f um), tentacles %.0f -> %.0f um wide -> %s"
       % (len(ps), a.size, a.size, r, rt, a.base, a.tip, a.layer))

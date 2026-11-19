@@ -21,7 +21,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import CLEARANCE, Design, body, load_params, read_layer, write_layer  # noqa: E402
+from tg_lib import CLEARANCE, Design, body, load_params, parse, read_layer, record, write_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -31,7 +31,7 @@ ap.add_argument("--length", default="auto", help="um along x' from the inner edg
 ap.add_argument("--clearance", type=float, default=CLEARANCE)
 ap.add_argument("--gap", type=float, default=0.15, help="um kept between C and the top-gate body")
 ap.add_argument("--layer", default="4/0")
-a = ap.parse_args()
+a = parse(ap, "contacts/contacts")
 
 D = Design(a.flakes, load_params(a.params))
 ch, dbu = read_layer(a.writes, "5/0")
@@ -44,6 +44,7 @@ cx1, _, cx2, _ = D.local_bbox(next(ch.each()))
 mid = (cx1 + cx2) / 2
 
 C = db.Region()
+rec = {}
 for west in (True, False):
     side = [D.local_bbox(p) for p in (arms - ch).each() if (D.local_bbox(p)[2] < mid) == west]
     if not side:
@@ -67,9 +68,11 @@ for west in (True, False):
         y2 = min(y2, D.local_bbox(p)[1])
     assert y1 < ya and y2 > yb, "no room for the contact between the arms and the top-gate body"
     C += D.box(xa, y1, xb, y2)
+    rec["west" if west else "east"] = {"x": [round(xa, 4), round(xb, 4)], "y": [round(y1, 4), round(y2, 4)], "length": round(xb - xa, 4)}
     print("%s contact: x' %.2f..%.2f (graphite edge %.2f, arm end %.2f), y' %.2f..%.2f (arms %.2f..%.2f)"
           % ("west" if west else "east", xa, xb, edge, end, y1, y2, ya, yb))
 C.merge()
 assert (C & BG).is_empty(), "contact touches the bottom graphite"
 assert (C & near).is_empty(), "contact within --gap of the top-gate body"
 write_layer(a.writes, a.layer, C, dbu)
+record(a.params, "contacts/contacts", rectangles=rec)

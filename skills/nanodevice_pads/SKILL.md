@@ -19,6 +19,9 @@ set relation.
 
 ## Inputs and scope
 
+Arguments can also come from `data/params.json` `args` (block `pads/<script>`); effective arguments
+and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
+
 All in the device folder's `klayoutclaw/`:
 - `writes.gds` with the electrodes 2/0 from `nanodevice_electrodes` (GDS paths; the last
   point of each is its tail) and the channel 5/0 (its centre is the pads' centre).

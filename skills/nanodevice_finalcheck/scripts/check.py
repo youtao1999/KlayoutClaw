@@ -27,13 +27,13 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import bg_terminal, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import bg_terminal, graphene, layer, load_params, parse, read_layer, record  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
 ap.add_argument("--params", required=True)
 ap.add_argument("--writes", required=True)
-a = ap.parse_args()
+a = parse(ap, "finalcheck/check", check=True)
 
 Pm = load_params(a.params)
 F = lambda k: read_layer(a.flakes, "%d/%d" % tuple(Pm["layers"][k]))[0]
@@ -91,4 +91,6 @@ print("%s 4. no electrodes shorted together%s" % ("PASS" if ok4 else "FAIL",
       "" if ok4 else ": " + ", ".join("%d-%d" % p for p in sorted(pairs)) + (" no role: %s" % bad if bad else "")))
 print("electrodes: %s; debris pieces %d" % (", ".join("%d %s" % (sum(n == r for n, _ in electrodes), r)
       for r in ("graphene", "top gate", "back gate")), len(debris)))
+record(a.params, "finalcheck/check", passed=not fails and ok4, failed=fails + ([] if ok4 else ["4"]),
+       electrodes={r: sum(n == r for n, _ in electrodes) for r in ("graphene", "top gate", "back gate")})
 sys.exit(1 if fails or not ok4 else 0)

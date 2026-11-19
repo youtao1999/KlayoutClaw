@@ -18,6 +18,9 @@ set relation. Runs after `nanodevice_pads`; it rewrites 7/0 from `nanodevice_con
 
 ## Inputs and scope
 
+Arguments can also come from `data/params.json` `args` (block `fingers/<script>`); effective arguments
+and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
+
 All in the device folder's `klayoutclaw/`:
 - `writes.gds` with the top gate 5/0-5/3, the etch checker 4/1 (`nanodevice_contacts`), the
   electrodes 2/0 (`nanodevice_electrodes`) and 7/0.

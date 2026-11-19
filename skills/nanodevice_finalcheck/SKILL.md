@@ -46,6 +46,9 @@ because the top hBN lies under the top graphite, not between it and the metal.)
 
 ## Procedure
 
+The verdict (checks passed, electrode counts) is added to `data/record.json` under
+`finalcheck/check` (nanodevice_topgate, "Params and run record").
+
 ```
 cd <device>/klayoutclaw
 P=<python>; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"

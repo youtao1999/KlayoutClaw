@@ -31,6 +31,9 @@ whenever `mask.py` is rerun.
 
 ## Inputs and scope
 
+Arguments can also come from `data/params.json` `args` (block `contacts/<script>`); effective arguments
+and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
+
 All in the device folder's `klayoutclaw/`:
 - `writes.gds` with the top gate already written by `nanodevice_topgate`: channel 5/0,
   arms 5/1, top-gate contacts 5/2, top-gate electrodes 5/3, active region 11/4 and the

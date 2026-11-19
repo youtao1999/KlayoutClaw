@@ -99,6 +99,22 @@ Python: the `instrMCPdev` conda env (`klayout` module); on macOS run shell loops
 Each script replaces only its own layer(s), so a step can be rerun without undoing the
 others.
 
+## Params and run record (whole chain)
+
+One `data/params.json` per device holds everything the chain needs (template:
+`params_six_piece.json` next to this file): `gate_end`, `layers`, `channel`, `back_gate`, and
+`args`, one block per script, keyed `<skill>/<script>` (e.g. `topgate/place`,
+`contacts/contacts`, `electrodes/electrodes`) with argument names as keys (`n`, `tail_slots`).
+`tg_lib.parse` reads a script's block as its defaults: the command line still wins, unknown keys
+stop the script, required arguments may come from the block. Check scripts read their writer's
+block, so a check sees the values its writer used. Put the per-device choices there (arms per
+side, width, gap, ...) and run every script without design arguments.
+
+Each writer adds its effective arguments and its choices (arm shift and contact size, contact
+rectangles, lead paths and tails, pad radius, the final verdict) to `data/record.json`, next to
+params.json: the device's run record. place.py's trial runs record nothing
+(`KLAYOUTCLAW_NO_RECORD`).
+
 ## Procedure (one run)
 
 ```

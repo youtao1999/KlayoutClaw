@@ -26,7 +26,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, graphene, layer, load_params, read_layer, write_layer  # noqa: E402
+from tg_lib import Design, graphene, layer, load_params, parse, read_layer, record, write_layer  # noqa: E402
 
 FLAKES = ["top_top_hbn", "top_graphite", "top_hbn", "graphene", "bottom_hbn", "graphite"]
 
@@ -40,7 +40,7 @@ ap.add_argument("--clear", type=float, default=0.25, help="um kept between a fin
 ap.add_argument("--leads", default="2/0")
 ap.add_argument("--checker", default="4/1")
 ap.add_argument("--layer", default="7/0")
-a = ap.parse_args()
+a = parse(ap, "fingers/fingers")
 
 Pm = load_params(a.params)
 D = Design(a.flakes, Pm)
@@ -88,4 +88,5 @@ print("R' %s (%.1f x %.1f um), R' - P %.1f um2; %d gaps between electrodes, %d f
       % (b, b.width(), b.height(), um2(Ri - P), gaps.count(), fingers.count(), um2(fingers),
          sorted(p.num_points() for p in fingers.each())))
 print("conductors outside R' (top graphite, graphene, grown by %.1f um): %.1f um2" % (a.margin, um2(cond)))
+record(a.params, "fingers/fingers", exposed_um2=[round(um2(old), 2), round(um2(M), 2)])
 print("7/0 exposed area %.1f -> %.1f um2 -> %s" % (um2(old), um2(M), a.layer))

@@ -8,7 +8,7 @@ Usage: python flakes.py --flakes prepared.gds --params params.json --writes writ
 import argparse
 import sys
 
-from tg_lib import load_params, read_layer, write_layer
+from tg_lib import load_params, parse, read_layer, write_layer
 
 FLAKES = ["top_top_hbn", "top_graphite", "top_hbn", "graphene", "bottom_hbn", "graphite"]
 
@@ -17,7 +17,7 @@ ap.add_argument("--flakes", required=True)
 ap.add_argument("--params", required=True)
 ap.add_argument("--writes", required=True)
 ap.add_argument("--layer", default="11/4")
-a = ap.parse_args()
+a = parse(ap, "topgate/flakes")
 
 lm = load_params(a.params)["layers"]
 pieces = lm.get("graphene_pieces", [])

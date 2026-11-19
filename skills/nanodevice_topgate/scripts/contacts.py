@@ -19,7 +19,7 @@ import sys
 
 import klayout.db as db
 
-from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, load_params, read_layer, write_layer
+from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, load_params, parse, read_layer, write_layer
 from tg_lib import graphene as graphene_union
 
 ap = argparse.ArgumentParser()
@@ -34,7 +34,7 @@ ap.add_argument("--escape", type=float, default=ESCAPE)
 ap.add_argument("--channel", default="5/0")
 ap.add_argument("--arms", default="5/1")
 ap.add_argument("--layer", default="5/2")
-a = ap.parse_args()
+a = parse(ap, "topgate/contacts")
 
 P = load_params(a.params)
 D = Design(a.flakes, P)

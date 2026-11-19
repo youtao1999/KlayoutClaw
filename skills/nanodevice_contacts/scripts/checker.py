@@ -24,7 +24,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, graphene, load_params, read_layer, write_layer  # noqa: E402
+from tg_lib import Design, graphene, load_params, parse, read_layer, write_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -37,7 +37,7 @@ ap.add_argument("--bare", type=float, default=0.25, help="stop growing once bare
 ap.add_argument("--step", type=float, default=0.1, help="search grid, um")
 ap.add_argument("--frame", type=float, default=2.0, help="um around the flake bounding box (R, as mask.py --margin)")
 ap.add_argument("--layer", default="4/1")
-a = ap.parse_args()
+a = parse(ap, "contacts/checker")
 
 P = load_params(a.params)
 D = Design(a.flakes, P)
