@@ -1,0 +1,4 @@
+# no-mistakes repository config (read from the default branch).
+# This fork has no CI workflows, so the gate's CI step treats a PR with zero checks as ready
+# instead of waiting for checks that never register.
+no_ci: true
