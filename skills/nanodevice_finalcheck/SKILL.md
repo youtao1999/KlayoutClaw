@@ -26,7 +26,8 @@ Primed sets, each piece after both etches:
 
 Star sets, each device with its electrodes (an electrode = its 2/0 path with its 2/1
 tentacle and pad; its role from its head: arm -> graphene, top-gate contact 5/2 -> top
-gate, exposed bottom graphite -> back gate):
+gate, exposed bottom graphite -> back gate; with params `back_gate.edge_contact` also the bottom
+graphite under the bottom hBN away from the top gate, `tg_lib.bg_terminal`):
 - TG* = TG' ∪ top-gate leads
 - BG* = BG' ∪ back-gate leads
 - Gr* = Gr' ∪ arm electrodes

@@ -52,7 +52,9 @@ replaces only its own layer. Not written here, later steps: 2/0 electrode (fine 
   hBN and top graphite, so X must be protected from it; everything below the top hBN (top
   hBN, all graphene pieces, bottom hBN) is taken out of X, so X keeps no graphene.
 - top-gate etch mask M = R − (T ∪ W ∪ X). Written (exposed); T, W and X stay under PMMA.
-  Etch goes down to the bottom hBN.
+  Etch goes down to the bottom hBN. With params `back_gate.edge_contact` the back-gate edge
+  terminals under the bottom hBN (`nanodevice_electrodes`) are not protected: the etch clears what
+  lies above them.
 - contacts C (4/0): rectangles. Etch goes down to the top hBN only: removes the top-top hBN
   and the top graphite in C, so the electrodes can reach the graphene there.
 - hard rule 1 (user, 2026-11-17): (T ∩ C) ∩ ∂C ⊆ A. Where the contact boundary lies on the
@@ -128,10 +130,12 @@ growth of R in mask.py (2 um), clearance from the stack below in checker.py (0.5
    X = BG − (TG ∪ TBN ∪ G ∪ BBN).
    Stops if there is no top gate. Asserts flakes ⊆ R, M ∩ (T ∪ W ∪ X) = ∅,
    M ∪ T ∪ W ∪ X = R.
-3. **Contacts** (4/0), `contacts.py [--length 3]`. One rectangle per side, local frame:
+3. **Contacts** (4/0), `contacts.py [--length auto]`. One rectangle per side, local frame:
    - x': inner edge `--gap` + 0.05 um past the bottom-graphite edge (as close to the
      graphite as rule 3 allows, for the most head room on the arm tip), so C ∩ BG = ∅ and
-     C covers every arm's outer end (rule 2); outer edge `--length` further out.
+     C covers every arm's outer end (rule 2); outer edge `--length` further out (auto: 0.1 um
+     past the farthest arm tip on that side, at least 3 um; arms run to the active-region edge, so a
+     fixed 3 um cut long arm tips off the top gate).
    - y': the side's arm span grown by the corridor clearance (0.3 um), so C stays in the
      arm corridors, which the top-gate contacts and electrodes avoid (rule 1); then each
      y' edge is pulled in until C stays `--gap` (0.15 um) from the top-gate body (rule 3).

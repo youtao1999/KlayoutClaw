@@ -160,7 +160,7 @@ Choice rule (user, 2026-11-17): take the largest contact size whose longest unbr
 of passing shifts is at least 0.05 um wide, and the shift in the middle of that run. A
 size that passes only in a narrower run is on a knife edge and is skipped. `place.py`
 does this: sizes from 1.0 um down in 0.05 um steps; shifts on a 0.05 um grid, refined to
-0.01 um around every passing point; each candidate runs arms, contacts, electrodes and
+0.01 um at the ends of each passing run; each candidate runs arms, contacts, electrodes and
 check on a temporary copy. Report its table and the choice.
 
 A worked example on a real device is kept with the device data, not in this repo.

@@ -27,7 +27,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import bg_terminal, graphene, layer, load_params, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -53,7 +53,7 @@ ly.read(a.writes)
 dbu = ly.dbu
 paths = [db.Region(s.polygon) for s in ly.top_cell().shapes(ly.layer(*layer("2/0"))).each()]
 big = Wr("2/1")
-X = BG - TG - TBN - Gr - BBN
+X = bg_terminal(a.flakes, Pm, a.writes)
 electrodes = []                                  # (role, region: path + its pad and tentacle)
 for L in paths:
     role = [n for n, t in [("graphene", arms - ch), ("top gate", I), ("back gate", X)] if not (L & t).is_empty()]

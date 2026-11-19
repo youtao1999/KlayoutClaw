@@ -23,7 +23,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, erode, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, bg_terminal, erode, graphene, layer, load_params, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -41,7 +41,7 @@ ch, arms, C, A, I = R("5/0"), R("5/1"), R("4/0"), R("11/4"), R("5/2")
 BG = D.R("graphite")
 lm = load_params(a.params)["layers"]
 F = lambda k: read_layer(a.flakes, "%d/%d" % tuple(lm[k]))[0]
-X = (BG - F("top_graphite") - F("top_hbn") - graphene(a.flakes, load_params(a.params))[0] - F("bottom_hbn")).merged()
+X = bg_terminal(a.flakes, load_params(a.params), a.writes)
 P = (ch + arms + I + R("5/3") + BG).merged()
 ly = db.Layout()
 ly.read(a.writes)

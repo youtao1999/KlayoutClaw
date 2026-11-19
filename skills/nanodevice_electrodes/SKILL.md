@@ -54,6 +54,13 @@ top-gate contacts 5/2, BG = bottom graphite 13/0, leads 2/0.
 - back-gate leads (user): the back gate has two leads, same rules as the other leads; their
   terminals are pieces of the exposed bottom graphite X = BG − (TG ∪ TBN ∪ G ∪ BBN), kept
   under PMMA by the 7/0 mask: L ∩ BG ⊆ X
+- back-gate edge contact (user, 2026-11-18), opt-in with params `"back_gate": {"edge_contact": true,
+  "gap": 0.5}` for a bottom graphite with no bare part (e.g. top graphite lying on it wherever the
+  hBN does not cover it): X also holds (BG ∩ BBN) − (T grown by gap), bottom graphite still under the
+  bottom hBN. The 7/0 etch clears everything above it down to the bottom hBN (it is not protected),
+  and the 2/0 etch cuts through the bottom hBN, so the gold makes edge contact with the graphite.
+  `tg_lib.bg_terminal` is the one definition of X used by electrodes.py, check.py and
+  nanodevice_finalcheck
 - hard rule (user): no electrode touches another electrode, and none but the back-gate leads
   touch the back gate: Lᵢ ∩ Lⱼ = ∅; L ∩ BG = ∅ for arm and top-gate leads; L ∩ BG ⊆ X for
   back-gate leads
@@ -76,6 +83,7 @@ steps are in the `nanodevice_topgate` and `nanodevice_contacts` glossaries.
 | head (of an electrode) | the starting point of the electrode, on the arm (or on the top-gate contact for a top-gate lead); for an arm it must lie within the active region ∩ contact layer | L ∩ P |
 | top-gate lead | electrode from a top-gate contact island to a big pad; same rules as the arm leads | 2/0 |
 | back-gate leads | the two electrodes from the exposed bottom graphite (back gate) to big pads; same rules as the other leads, written with them | 2/0 |
+| back-gate edge contact | a back-gate lead landing on bottom graphite still under the bottom hBN, contacting the graphite edge through the hBN (params `back_gate.edge_contact`) | 2/0 |
 | big pads | see `nanodevice_pads` | 2/1 |
 
 ## Procedure
@@ -106,9 +114,8 @@ Arm lead, local frame:
   cross.
 - `--width` 0.8 um.
 
-Top-gate lead: head at the centre of the island; tail: the free tail whose direction from
-the channel centre is nearest the island's; stub along an axis, `--clear` past the island,
-then straight to the tail.
+Top-gate lead: head at the centre of the island; stub along an axis, `--clear` past the
+island, then straight to its tail.
 Back-gate leads (`--bg-leads` 2): as the top-gate leads, one per piece of X, largest pieces
 first; head at the deepest point of the piece (erode in 0.05 um steps until it vanishes).
 A piece's width is 2 × the depth it erodes to before vanishing (any edge angle); only
@@ -117,6 +124,13 @@ back-gate terminals. Back-gate lead width: min(0.8, piece width − 0.1) um.
 Fewer usable pieces than leads: the script stops (two heads on one piece not implemented yet).
 Every terminal lead (top-gate and back-gate) tries the four stub axes nearest the tail first
 and takes the first whose lead meets the stack (T ∪ BG) only on its terminal.
+Tails of the terminal leads: every assignment of the free tails is tried, and the shortest
+one wins where every lead meets the stack only on its terminal and all leads stay `--spacing`
+(0.5 um) apart. (A greedy nearest-tail choice can leave a later terminal only tails behind the
+channel.) `--tail-slots` puts more tail positions on the circle than leads (default: one per
+lead); use it when no assignment exists. The arms still take the slots nearest their sides.
+More slots crowd the tails, and `nanodevice_pads` then moves the pads outward, so take the
+smallest count that works.
 Inset, clear, tail margin, 0.8 um and the 0.3 um minimum width are Claude's choices.
 
 ## Checks

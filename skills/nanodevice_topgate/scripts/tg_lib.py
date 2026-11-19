@@ -34,6 +34,25 @@ def graphene(path, params):
     return union.merged(), active
 
 
+def bg_terminal(flakes, params, writes):
+    """Back-gate terminal: the exposed bottom graphite X = BG − (TG ∪ TBN ∪ G ∪ BBN), kept under
+    PMMA by the 7/0 mask. With params back_gate.edge_contact (user, 2026-11-18: for a bottom graphite
+    with no bare part) it also holds (BG ∩ BBN) − (top gate grown by back_gate.gap): bottom graphite
+    under the bottom hBN, cleared by the 7/0 etch and edge-contacted through the bottom hBN by the
+    2/0 etch, which goes down to the substrate."""
+    lm = params["layers"]
+    F = lambda k: read_layer(flakes, "%d/%d" % tuple(lm[k]))[0]
+    bg, bbn = F("graphite"), F("bottom_hbn")
+    x = bg - F("top_graphite") - F("top_hbn") - graphene(flakes, params)[0] - bbn
+    bgp = params.get("back_gate", {})
+    if bgp.get("edge_contact"):
+        t, dbu = read_layer(writes, "5/0")
+        for s in ("5/1", "5/2", "5/3"):
+            t += read_layer(writes, s)[0]
+        x += (bg & bbn) - t.merged().sized(int(round(bgp.get("gap", 0.5) / dbu)))
+    return x.merged()
+
+
 def erode(region, dbu, step=0.05):
     """Erode region in step-um steps until it vanishes: (last non-empty region, depth in um).
     2 x depth is the region's real width, whatever the angle of its edges."""

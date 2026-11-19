@@ -7,8 +7,8 @@ Rule (user, 2026-11-17): take the largest contact size whose longest unbroken ru
 shifts is at least --min-window wide; use the shift in the middle of that run.
 Sizes are tried from --max-size down in --size-step steps, never below electrode width + 0.1
 (smaller contacts leave the electrode router no start point). Shifts are scanned on a 0.05 um
-grid (a run >= 0.05 wide always holds a grid point), then refined to --shift-step around
-every passing point.
+grid (a run >= 0.05 wide always holds a grid point), then refined to --shift-step outward from
+the two ends of each run of passing grid points.
 
 Usage: python place.py --flakes prepared.gds --params params.json --writes writes.gds
                        --n 3 --width 1 --gap 1 [--contacts 2] [--min-window 0.05]
@@ -82,12 +82,24 @@ try:
     while size >= a.electrode_width + 0.1 - 1e-9 and choice is None:
         coarse = {q(-half + k * 0.05) for k in range(int(2 * half / 0.05) + 1)} | {q(-half), q(half)}
         coarse = sorted(s for s in coarse if abs(s) <= half + 1e-9)
-        ok = {s for s in coarse if passes(size, s)}
-        fine = set(ok)
-        for c in ok:                                    # refine around each passing grid point
-            for k in range(-int(0.05 / a.shift_step), int(0.05 / a.shift_step) + 1):
-                s = q(c + k * a.shift_step)
-                if abs(s) <= half + 1e-9 and s not in fine and passes(size, s):
+        ok = [s for s in coarse if passes(size, s)]
+        fine = set()
+        groups = []                                     # runs of neighbouring passing grid points
+        for s in ok:
+            if groups and s - groups[-1][-1] < 0.05 * 1.5:
+                groups[-1].append(s)
+            else:
+                groups.append([s])
+        nk = int(round(0.05 / a.shift_step))
+        for g in groups:
+            # shortcut: fine points between two passing grid points count as passing (a failing pocket
+            # < 0.05 um inside a run is missed); refine every fine point if a design ever shows one
+            fine.update(q(g[0] + k * a.shift_step) for k in range(int(round((g[-1] - g[0]) / a.shift_step)) + 1))
+            for start, sign in ((g[0], -1), (g[-1], 1)):   # refine outward from each end
+                for k in range(1, nk):
+                    s = q(start + sign * k * a.shift_step)
+                    if abs(s) > half + 1e-9 or not passes(size, s):
+                        break
                     fine.add(s)
         runs, cur = [], []
         for s in sorted(fine):                          # unbroken runs on the fine grid
