@@ -1,6 +1,6 @@
 ---
 name: nanodevice_finalcheck
-description: Final electrical check of a finished six-piece dual-gated graphene device design (after nanodevice_topgate, _contacts, _electrodes, _pads, _fingers), then export of writes.gds (EBL layers only) from result.gds. Pure set arithmetic on the pieces left after both etches, each device joined with its electrodes: top gate, graphene and back gate must not be shorted together, and no two electrodes may be shorted.
+description: "Final electrical check of a finished six-piece dual-gated graphene device design (after nanodevice_topgate, _contacts, _electrodes, _pads, _fingers), then export of writes.gds (EBL layers only) from result.gds. Pure set arithmetic on the pieces left after both etches, each device joined with its electrodes: top gate, graphene and back gate must not be shorted together, and no two electrodes may be shorted."
 ---
 
 # nanodevice_finalcheck -- shorts by set arithmetic
