@@ -40,4 +40,3 @@ def test_edge_contact_adds_bottom_graphite_under_bottom_hbn(device):
     x = bg_terminal(flakes, {"layers": LAYERS, "back_gate": {"edge_contact": True, "gap": 0.5}}, writes)
     expect = box(-1, -5, 1, -0.5) + box(-1, 10.5, 1, 15)
     assert (x ^ expect).is_empty()
-
