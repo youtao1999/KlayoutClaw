@@ -42,12 +42,10 @@
   ]
  },
  "channel": {
-  "y": [
-   -5.0,
-   5.0
-  ],
+  "y": "auto",
   "bg_inset": 0.5,
-  "min_width": 1.0
+  "min_width": 1.0,
+  "arm_reach": 0.7
  },
  "back_gate": {
   "edge_contact": false,

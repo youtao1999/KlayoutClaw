@@ -138,7 +138,7 @@ def write_layer(path, spec, region, dbu):
     ly = db.Layout()
     if os.path.exists(path):
         ly.read(path)
-    else:                                   # first write: new writes.gds with one top cell
+    else:                                   # first write: new design file with one top cell
         ly.dbu = dbu
         ly.create_cell("TOP")
     assert abs(ly.dbu - dbu) < 1e-12, "dbu differs between flakes and writes GDS"

@@ -1,8 +1,8 @@
 """Step 2: place every visible flake in the full-stack photo: a rigid fit (scale 1 by default: same camera)
 of its outline to the photo's edges over ALL rotations. Never limit the rotation by the plan: stacks
 deviate from it (a flake can be dropped turned 180 deg). The best fit at least 90 deg away is reported
-too; when its cost is within --ambiguous of the best, the script warns and the operator decides (pin
-the rotation with "rot_range" in that flake's entry).
+too; when its cost is within --ambiguous of the best, the script stops with exit code 3 and the operator
+decides (pin the rotation with "rot_range" in that flake's entry).
 
 Usage: python fit.py --params <device>/klayoutclaw/data/params.json [--only top_hBN ...] [--ambiguous 0.15]
 prepare.flakes: {role: {"gds": "ingredients/BN001a.gds", "layer": [20, 0]} | {"image": "<alpha png>"} |
@@ -60,4 +60,5 @@ for role, spec in p.c["flakes"].items():
 record(p.params, "prepare/fit", flakes=summary)
 print("review: %s/fit_<role>.png (best fit green, alternative magenta)" % p.work)
 if warn:
-    print("WARNING: ambiguous rotation for %s: compare the two fits, ask the operator, then pin \"rot_range\"" % ", ".join(warn))
+    print("ambiguous rotation for %s: compare the two fits, ask the operator, then pin \"rot_range\"" % ", ".join(warn))
+    sys.exit(3)

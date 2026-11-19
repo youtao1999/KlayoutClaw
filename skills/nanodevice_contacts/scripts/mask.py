@@ -8,7 +8,7 @@ graphite; everything below the top hBN (top hBN, graphene pieces, bottom hBN) is
 M is the written (exposed) area; T, W and X stay under PMMA. The etch goes all the way down to
 the bottom hBN, so it defines the shape of the top gate and of the graphene.
 
-Usage: python mask.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python mask.py --flakes prepared.gds --params params.json --writes result.gds
                       [--margin 2] [--checker 4/1] [--layer 7/0]
 Run checker.py first (an empty 4/1 is fine: no checker on this stack).
 """

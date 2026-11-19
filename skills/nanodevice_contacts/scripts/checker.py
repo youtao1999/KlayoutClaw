@@ -13,7 +13,7 @@ the most bare substrate), so W covers the stack part first; it stops when no ste
 S and bare substrate is at least --bare of W. The seed is cut to --size. W must hold bare substrate.
 Many stacks have no such region, or no such W: then no checker is drawn (4/1 cleared), exit 0.
 
-Usage: python checker.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python checker.py --flakes prepared.gds --params params.json --writes result.gds
                          [--margin 0.5] [--min-seed 1] [--size 10] [--bare 0.25] [--step 0.1] [--frame 2] [--layer 4/1]
 Run before mask.py.
 """

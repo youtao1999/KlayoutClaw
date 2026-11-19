@@ -14,7 +14,7 @@ X = exposed bottom graphite BG − (TG ∪ TBN ∪ G ∪ BBN), the back-gate ter
    --bg-leads (2) back-gate leads.
 Sets are closed: A ∩ C, the island and the piece of X are grown by 1 dbu.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--spacing 0.5] [--min-width 0.3]
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds [--spacing 0.5] [--min-width 0.3]
 """
 import argparse
 import os

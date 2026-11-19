@@ -1,6 +1,6 @@
 ---
 name: nanodevice_finalcheck
-description: Final electrical check of a finished six-piece dual-gated graphene device design (after nanodevice_topgate, _contacts, _electrodes, _pads, _fingers). Pure set arithmetic on the pieces left after both etches, each device joined with its electrodes: top gate, graphene and back gate must not be shorted together, and no two electrodes may be shorted.
+description: Final electrical check of a finished six-piece dual-gated graphene device design (after nanodevice_topgate, _contacts, _electrodes, _pads, _fingers), then export of writes.gds (EBL layers only) from result.gds. Pure set arithmetic on the pieces left after both etches, each device joined with its electrodes: top gate, graphene and back gate must not be shorted together, and no two electrodes may be shorted.
 ---
 
 # nanodevice_finalcheck -- shorts by set arithmetic
@@ -51,10 +51,18 @@ The verdict (checks passed, electrode counts) is added to `data/record.json` und
 
 ```
 cd <device>/klayoutclaw
-P=<python>; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"
+P=<python>; A="--flakes data/prepared.gds --params data/params.json --writes result.gds"
 $P <KlayoutClaw>/skills/nanodevice_finalcheck/scripts/check.py $A
+$P <KlayoutClaw>/skills/nanodevice_finalcheck/scripts/export.py $A    # only after a PASS
 ```
-Python: the `instrMCPdev` conda env; run under `bash -c` (zsh does not split `$A`).
+
+**Export** (`export.py`): writes the deliverables next to result.gds. `writes.gds` holds only the EBL
+write layers (`--ebl`, default 7/0, 4/0, 4/1, 2/0, 2/1: the file sent to the EBL) with `writes.lyp`;
+`result.lyp` names the layers of result.gds (template, the flakes where they landed, every design
+layer: the file to review); `<photo>.lyimg` is the full-stack photo placed by the marker alignment.
+It refuses a design whose final check has not passed (`--force` overrides). The stack plan
+`design.gds` is never written.
+Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the `instrMCPdev` conda env; run under `bash -c` (zsh does not split `$A`).
 
 ## Negative tests
 

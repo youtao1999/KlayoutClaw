@@ -35,7 +35,7 @@ Arguments can also come from `data/params.json` `args` (block `contacts/<script>
 and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
 
 All in the device folder's `klayoutclaw/`:
-- `writes.gds` with the top gate already written by `nanodevice_topgate`: channel 5/0,
+- `result.gds` with the top gate already written by `nanodevice_topgate`: channel 5/0,
   arms 5/1, top-gate contacts 5/2, top-gate electrodes 5/3, active region 11/4 and the
   flake copies. Do not rerun or change the top gate here.
 - `data/prepared.gds` (the flakes) and `data/params.json` (only the `layers` map and the
@@ -44,7 +44,7 @@ All in the device folder's `klayoutclaw/`:
 
 Writes only 4/1 (etch checker), 7/0 (top-gate etch mask) and 4/0 (contacts); each script
 replaces only its own layer. Not written here, later steps: 2/0 electrode (fine metal),
-2/1 big pads, 3/1. Python: the `instrMCPdev` conda env; on macOS run the procedure under
+2/1 big pads, 3/1. Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the `instrMCPdev` conda env; on macOS run the procedure under
 `bash -c` (zsh does not split `$A`).
 
 ## Set rules
@@ -105,7 +105,7 @@ both are written in the same 4/x etch.
 
 ```
 cd <device>/klayoutclaw
-P=<python>; S=<skill>/scripts; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"
+P=<python>; S=<skill>/scripts; A="--flakes data/prepared.gds --params data/params.json --writes result.gds"
 $P $S/checker.py $A              # 1  etch checker W on 4/1
 $P $S/mask.py $A                 # 2  top-gate etch mask M = R - (T ∪ W ∪ X) on 7/0
 $P $S/contacts.py $A             # 3  contact rectangles on 4/0

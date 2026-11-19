@@ -4,8 +4,9 @@ the photo to work/prepare/all.png for review.
 
 Usage: python prepared.py --params <device>/klayoutclaw/data/params.json
 Layers (make_prepared.py): top_top_hBN 16/0, top_graphite 14/0, top_hBN 10/0, graphene 11/0 (union of the
-pieces 11/1, 11/2, ...), bottom_hBN 12/0, graphite (bottom graphite) 13/0. Template layers that collide
-with the flake layers are moved (11 -> 111, 12 -> 112, 10 -> 110, 13 -> 113).
+pieces 11/1, 11/2, ...), bottom_hBN 12/0, graphite (bottom graphite) 13/0. Template layers (datatype 0)
+that collide with a flake or design layer (2, 4, 5, 7, 10-14, 16) move to 100 + n, e.g. 4/0 -> 104/0, so
+nanodevice_topgate can start result.gds as a copy of prepared.gds.
 """
 import json
 import subprocess
@@ -15,6 +16,9 @@ import cv2
 import numpy as np
 
 from prep_lib import ROOT, TRACE_NAMES, Prep, args, contours, record, source_mask, warp
+
+# template layers that would collide with a flake layer or a design layer of the six-piece chain move to 100 + n
+REMAP = ",".join("%d:%d" % (n, 100 + n) for n in (2, 4, 5, 7, 10, 11, 12, 13, 14, 16))
 
 a = args(__doc__)
 p = Prep(a)
@@ -41,7 +45,8 @@ mats["graphene"] = [{"contour_px": c} for c in contours(union, eps=1.0)]
 
 r = subprocess.run([sys.executable, str(ROOT / "tests_resources" / "recipes" / "topgated_hallbar" / "make_prepared.py"),
                     "--template", str(p.path(p.c["template"])), "--traces", str(p.data / "traces.json"),
-                    "--warp-px", str(p.data / "gds_warp_px.npy"), "--out", str(p.data / "prepared.gds")],
+                    "--warp-px", str(p.data / "gds_warp_px.npy"), "--out", str(p.data / "prepared.gds"),
+                    "--remap", REMAP],
                    capture_output=True, text=True)
 if r.returncode:
     sys.exit("make_prepared.py failed:\n" + r.stderr[-2000:])

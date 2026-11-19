@@ -8,7 +8,7 @@ P = T ∪ W ∪ X (as fingers.py), R' = bounding box of P grown by --margin, lea
    touches at most one electrode and does not touch P (slivers under 4 dbu wide, rounding
    along P's edge, are ignored).
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--frame 2]
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds [--frame 2]
 """
 import argparse
 import os

@@ -12,7 +12,7 @@ r: the smallest from tail radius + --reach upward in --step steps for which pads
 each other, tentacles keep --gap from each other and from other pads, and nothing touches another
 lead or comes within --clear of the flakes.
 
-Usage: python pads.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python pads.py --flakes prepared.gds --params params.json --writes result.gds
                       [--size 120] [--base 40] [--tip 4] [--into 5] [--overlap 2] [--reach 20]
                       [--step 5] [--gap 20] [--clear 20] [--leads 2/0] [--layer 2/1]
 """

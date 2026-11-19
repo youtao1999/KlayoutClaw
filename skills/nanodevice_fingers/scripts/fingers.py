@@ -15,7 +15,7 @@ X = BG − (TG ∪ TBN ∪ G ∪ BBN)), as in nanodevice_contacts/mask.py.
 M = ((R' − P) ∪ fingers ∪ conductors) − P. Large exposed areas near fine features blur them (proximity dose), so the
 exposed area is kept small.
 
-Usage: python fingers.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python fingers.py --flakes prepared.gds --params params.json --writes result.gds
                          [--margin 2] [--frame 2] [--clear 0.25] [--leads 2/0] [--checker 4/1] [--layer 7/0]
 Run after nanodevice_pads (the electrodes 2/0 must exist).
 """

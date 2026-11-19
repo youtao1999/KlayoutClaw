@@ -22,12 +22,12 @@ Arguments can also come from `data/params.json` `args` (block `fingers/<script>`
 and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
 
 All in the device folder's `klayoutclaw/`:
-- `writes.gds` with the top gate 5/0-5/3, the etch checker 4/1 (`nanodevice_contacts`), the
+- `result.gds` with the top gate 5/0-5/3, the etch checker 4/1 (`nanodevice_contacts`), the
   electrodes 2/0 (`nanodevice_electrodes`) and 7/0.
 - `data/prepared.gds` (flakes) and `data/params.json` (local frame and flake layers only).
 
 Rewrites only 7/0; rerunning is safe. Rerun it after `nanodevice_contacts/mask.py` (which
-writes the full mask again) or after `nanodevice_electrodes` (the lanes move). Python: the
+writes the full mask again) or after `nanodevice_electrodes` (the lanes move). Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the
 `instrMCPdev` conda env; run under `bash -c` (zsh does not split `$A`).
 
 ## Set rules
@@ -67,7 +67,7 @@ the other nanodevice_* glossaries.
 
 ```
 cd <device>/klayoutclaw
-P=<python>; S=<KlayoutClaw>/skills/nanodevice_fingers/scripts; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"
+P=<python>; S=<KlayoutClaw>/skills/nanodevice_fingers/scripts; A="--flakes data/prepared.gds --params data/params.json --writes result.gds"
 $P $S/fingers.py $A
 $P $S/check.py $A
 for s in topgate contacts electrodes pads; do $P <KlayoutClaw>/skills/nanodevice_$s/scripts/check.py $A; done   # all still pass

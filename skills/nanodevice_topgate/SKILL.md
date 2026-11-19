@@ -1,6 +1,6 @@
 ---
 name: nanodevice_topgate
-description: Write the top gate (channel, arms, top-gate contacts, top-gate electrodes) of a six-piece dual-gated graphene device (bottom graphite, bottom hBN, graphene, top hBN, top graphite, top-top hBN) into a device folder's writes.gds, then check it. The top gate is etched from the top graphite, not evaporated, so it is built from parts that belong to different etch steps.
+description: Write the top gate (channel, arms, top-gate contacts, top-gate electrodes) of a six-piece dual-gated graphene device (bottom graphite, bottom hBN, graphene, top hBN, top graphite, top-top hBN) into a device folder's result.gds (the design file; writes.gds is exported from it at the end), then check it. The top gate is etched from the top graphite, not evaporated, so it is built from parts that belong to different etch steps.
 ---
 
 # nanodevice_topgate -- top gate of a six-piece stack
@@ -84,17 +84,20 @@ drawn on 3/0. Do not write these layers; they belong to subsequent steps:
 ## Inputs
 
 All in the device folder's `klayoutclaw/`:
-- `data/prepared.gds`: the raw flakes in the writes.gds frame. In future the capture
+- `data/prepared.gds`: the chip template and the flakes where they landed, in chip coordinates (from
+  `nanodevice_prepare`). In future the capture
   program delivers a GDS per flake (graphite included); they replace this file.
 - `data/params.json`: only `gate_end`, the `layers` map and the `channel` block (`y`,
   `bg_inset`, `min_width`) are used. Other blocks (`arms`, `finger`, `tg_contact`,
   `bridge`, `pads`, ...) are left from earlier designs: ignore them, they are not inputs.
   Coordinates are in the local strip frame: x' across the bottom graphite, y' along it,
   origin at the bottom-graphite hull centroid.
-- `writes.gds`: the file being written; created by the first step if it does not exist.
+- `result.gds`: the design file, started by the first step as a copy of prepared.gds; every later step
+  adds its layers. It holds everything (template, flakes, design). The stack plan `design.gds` is never
+  written. `writes.gds` (only the EBL layers) is exported from it by `nanodevice_finalcheck/export.py`.
 - From the user: arms per side, arm width, gap between arms.
 
-Python: the `instrMCPdev` conda env (`klayout` module); on macOS run shell loops under
+Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the `instrMCPdev` conda env (`klayout` module); on macOS run shell loops under
 `bash -c` (zsh does not split variables). Scripts are in `scripts/` next to this file.
 Each script replaces only its own layer(s), so a step can be rerun without undoing the
 others.
@@ -119,7 +122,7 @@ params.json: the device's run record. place.py's trial runs record nothing
 
 ```
 cd <device>/klayoutclaw
-P=<python>; S=<skill>/scripts; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"
+P=<python>; S=<skill>/scripts; A="--flakes data/prepared.gds --params data/params.json --writes result.gds"
 $P $S/flakes.py $A                                   # 0  flakes + active region
 $P $S/channel.py $A                                  # 1  channel
 $P $S/place.py $A --n 3 --width 1 --gap 1            # 2-4 arms, contacts, electrodes + checks
@@ -127,10 +130,13 @@ $P $S/place.py $A --n 3 --width 1 --gap 1            # 2-4 arms, contacts, elect
 
 0. **Flakes and active region.** Copies the six flake layers (`top_top_hbn` 16/0,
    `top_graphite` 14/0, `top_hbn` 10/0, `graphene` 11/0, `bottom_hbn` 12/0, `graphite`
-   13/0) and the `graphene_pieces` into writes.gds and writes the active region to 11/4.
+   13/0) and the `graphene_pieces`: starts result.gds as a copy of prepared.gds and writes the active
+   region to 11/4.
    Stops if a layer is empty or the pieces do not overlap.
 1. **Channel** (5/0). Rectangle along the bottom graphite, narrower than it by
-   `channel.bg_inset` on each side, over `channel.y`. Stops if it would be narrower than
+   `channel.bg_inset` on each side, over `channel.y`: [y1, y2] in the local frame, or `"auto"`, the
+   longest stretch where the active region reaches `channel.arm_reach` (0.7 um) past both
+   bottom-graphite edges and both hBN cover the graphite (where arms and their contacts fit). Stops if it would be narrower than
    `channel.min_width` or leave the bottom graphite.
 2. **Placement search** (`place.py`) chooses the free parameters and writes parts 2-4,
    then runs the checks. See "Deciding the placement yourself".
@@ -185,7 +191,7 @@ A worked example on a real device is kept with the device data, not in this repo
 
 Run at the very end. Exit code 1 if any check fails; do not hand over a failing design.
 ```
-python <skill>/scripts/check.py --flakes data/prepared.gds --params data/params.json --writes writes.gds
+python <skill>/scripts/check.py --flakes data/prepared.gds --params data/params.json --writes result.gds
 ```
 1. Arms are a subset of the active region.
 2. Channel is a subset of the bottom graphite.

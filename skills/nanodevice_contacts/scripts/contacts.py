@@ -12,7 +12,7 @@ One rectangle per side, in the local frame:
 Rule 3: C covers only the arm tips (arms − BG) of the top gate and keeps --gap from the rest,
 the body = channel ∪ (arms ∩ BG) ∪ top-gate contacts ∪ top-gate electrodes.
 
-Usage: python contacts.py --flakes prepared.gds --params params.json --writes writes.gds [--length auto] [--layer 4/0]
+Usage: python contacts.py --flakes prepared.gds --params params.json --writes result.gds [--length auto] [--layer 4/0]
 """
 import argparse
 import os

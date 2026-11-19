@@ -29,7 +29,7 @@ BBN) (kept under PMMA by the 7/0 mask), one lead per piece. A piece's width is 2
 erodes to before vanishing (tg_lib.erode); only pieces with width − 0.1 >= --min-width count,
 thinner slivers are not terminals. Width: min(--width, piece width - 0.1).
 
-Usage: python electrodes.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python electrodes.py --flakes prepared.gds --params params.json --writes result.gds
                             [--width 0.8] [--inset 0.05] [--clear 1] [--tail-radius auto|<um>] [--tail-margin 30] [--bg-leads 2] [--min-width 0.3] [--layer 2/0]
 """
 import argparse

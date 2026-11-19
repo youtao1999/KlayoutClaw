@@ -1,7 +1,7 @@
 """Top gate, placement search: choose the free parameters (arm shift, contact size) yourself.
 
-Runs arms.py -> contacts.py -> electrodes.py -> check.py on scratch copies of writes.gds for each
-(contact size, arm shift) candidate, then writes the chosen design into writes.gds.
+Runs arms.py -> contacts.py -> electrodes.py -> check.py on scratch copies of result.gds for each
+(contact size, arm shift) candidate, then writes the chosen design into result.gds.
 
 Rule (user, 2026-11-17): take the largest contact size whose longest unbroken run of passing
 shifts is at least --min-window wide; use the shift in the middle of that run.
@@ -10,7 +10,7 @@ Sizes are tried from --max-size down in --size-step steps, never below electrode
 grid (a run >= 0.05 wide always holds a grid point), then refined to --shift-step outward from
 the two ends of each run of passing grid points.
 
-Usage: python place.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python place.py --flakes prepared.gds --params params.json --writes result.gds
                        --n 3 --width 1 --gap 1 [--contacts 2] [--min-window 0.05]
                        [--max-size 1.0] [--size-step 0.05] [--shift-step 0.01] [--electrode-width 0.5]
 Run flakes.py and channel.py first.
@@ -71,7 +71,7 @@ def design(writes, size, shift):
 
 tmp = tempfile.mkdtemp(prefix="topgate_place_")
 try:
-    trial = os.path.join(tmp, "writes.gds")
+    trial = os.path.join(tmp, "result.gds")
 
     def passes(size, shift):
         shutil.copyfile(a.writes, trial)

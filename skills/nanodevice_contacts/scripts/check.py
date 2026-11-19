@@ -9,7 +9,7 @@
 4. Room for every electrode head: per arm, T ∩ C ∩ A (graphene left, top graphite etched
    away) reaches at least --min-head along x'.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--contacts 4/0]
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds [--contacts 4/0]
 """
 import argparse
 import os

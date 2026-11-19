@@ -18,7 +18,7 @@ L_BG, L_Gr the top-gate, back-gate and arm electrodes:
 4. no electrodes shorted together: any two electrodes are disjoint, and no conductor piece
    outside the devices (a piece of TG', Gr' or BG' not on the channel: debris) touches two of them.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds
 """
 import argparse
 import os

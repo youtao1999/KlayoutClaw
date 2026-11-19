@@ -7,7 +7,7 @@ it to the channel. Set rules:
 Each electrode is the shortest Manhattan route (local strip frame, few turns) of --width from
 the contact to a point that puts its end fully inside the channel; both ends sit fully inside.
 
-Usage: python electrodes.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python electrodes.py --flakes prepared.gds --params params.json --writes result.gds
                             [--width 0.5] [--clearance 0.3] [--escape 50] [--step 0.05] [--turn 1.0]
                             [--channel 5/0] [--arms 5/1] [--contacts 5/2] [--layer 5/3]
 """

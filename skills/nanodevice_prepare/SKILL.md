@@ -54,7 +54,7 @@ during stacking (one device had its bottom hBN turned 180 deg). So:
 - Roles: `top_top_hBN` 16/0, `top_graphite` 14/0, `top_hBN` 10/0, `bottom_hBN` 12/0, `graphite`
   (bottom graphite) 13/0; graphene pieces 11/1, 11/2, ... and their union 11/0.
 
-Python: `python3` with klayout, numpy, scipy, opencv, gdstk.
+Python: `python3` with klayout, numpy, scipy, opencv, gdstk (Linux: `docs/device_skills_linux.md`).
 
 ## Procedure
 

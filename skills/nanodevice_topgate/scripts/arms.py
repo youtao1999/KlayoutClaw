@@ -5,11 +5,11 @@ channel (by --overlap) out past the bottom-graphite edge by --overshoot. Default
 each arm runs out as far as it stays --edge-margin inside the active region (11/4), so the arm tip
 leaves room for the electrode head (user, 2026-11-17: longer arms for head room).
 
-Usage: python arms.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python arms.py --flakes prepared.gds --params params.json --writes result.gds
                       --n 3 --width 1 --gap 1 [--shift 0] [--overshoot max|<um>] [--edge-margin 0.1] [--overlap 0.5] [--sides L R]
                       [--channel 5/0] [--layer 5/1]
 
-Reads the channel from writes.gds (--channel, written by channel.py) and replaces --layer.
+Reads the channel from result.gds (--channel, written by channel.py) and replaces --layer.
 """
 import argparse
 import sys

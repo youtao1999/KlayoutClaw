@@ -1,17 +1,19 @@
 """Top gate, part 1: the channel. A rectangle along the bottom-graphite strip, narrower than
-the bottom graphite by channel.bg_inset on each side, written to the channel layer of writes.gds.
+the bottom graphite by channel.bg_inset on each side, written to the channel layer of result.gds.
 
-Usage: python channel.py --flakes prepared.gds --params params.json --writes writes.gds [--layer 5/0]
+Usage: python channel.py --flakes prepared.gds --params params.json --writes result.gds [--layer 5/0]
 
---flakes : GDS with the bottom graphite (params layers.graphite), same frame as writes.gds
---params : device params; uses gate_end and channel {y: [y1, y2], bg_inset, min_width}
+--flakes : GDS with the bottom graphite (params layers.graphite), same frame as result.gds
+--params : device params; uses gate_end and channel {y: [y1, y2] or "auto", bg_inset, min_width,
+           arm_reach (auto: 0.7)}; "auto" takes the longest stretch where the active region reaches
+           arm_reach past both bottom-graphite edges and both hBN cover the graphite
            (local strip frame: x' across the bottom graphite, y' along it)
-The channel layer in writes.gds is replaced; every other layer is left as it is.
+The channel layer in result.gds is replaced; every other layer is left as it is.
 """
 import argparse
 import sys
 
-from tg_lib import Design, load_params, parse, record, write_layer
+from tg_lib import Design, graphene, load_params, parse, record, write_layer
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -23,7 +25,30 @@ a = parse(ap, "topgate/channel")
 P = load_params(a.params)
 D = Design(a.flakes, P)
 CH = P["channel"]
-y1, y2 = CH["y"]
+if CH["y"] == "auto":
+    # the longest stretch along the bottom graphite where the active region reaches arm_reach past both
+    # graphite edges (room for arms and their contacts) and both hBN cover the graphite
+    A = graphene(a.flakes, P)[1]
+    TBN, BBN, reach = D.R("top_hbn"), D.R("bottom_hbn"), CH.get("arm_reach", 0.7)
+    inside = lambda R, xa, xb, y: (D.box(xa, y - 0.01, xb, y + 0.01) - R).is_empty()
+    gx1, gy1, gx2, gy2 = D.local_bbox(next(D.R("graphite").each()))
+    good = []
+    for k in range(int(gy1 * 10) + 1, int(gy2 * 10)):
+        y = k / 10
+        xl, xr = D.graphite_edge(y, "L"), D.graphite_edge(y, "R")
+        if inside(A, xl - reach, xr + reach, y) and inside(TBN, xl, xr, y) and inside(BBN, xl, xr, y):
+            good.append(y)
+    runs = []
+    for y in good:
+        if runs and y - runs[-1][-1] < 0.15:
+            runs[-1].append(y)
+        else:
+            runs.append([y])
+    if not runs:
+        sys.exit("no stretch of the bottom graphite where the active region reaches %.2f um past both edges" % reach)
+    y1, y2 = max(((r[0], r[-1]) for r in runs), key=lambda r: r[1] - r[0])
+else:
+    y1, y2 = CH["y"]
 ys = [y1 + (y2 - y1) * k / 20 for k in range(21)]
 x1 = max(D.graphite_edge(y, "L") for y in ys) + CH["bg_inset"]
 x2 = min(D.graphite_edge(y, "R") for y in ys) - CH["bg_inset"]

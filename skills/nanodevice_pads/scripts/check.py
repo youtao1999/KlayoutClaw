@@ -7,7 +7,7 @@
 3. pads --gap apart; tentacles --gap from other tentacles and other pads.
 4. pads and tentacles stay --clear away from the flakes' bounding box.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds
 """
 import argparse
 import os
