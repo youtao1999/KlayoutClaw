@@ -13,7 +13,7 @@ the most bare substrate), so W covers the stack part first; it stops when no ste
 S and bare substrate is at least --bare of W. The seed is cut to --size. W must hold bare substrate.
 Many stacks have no such region, or no such W: then no checker is drawn (4/1 cleared), exit 0.
 
-Usage: python checker.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python checker.py --flakes prepared.gds --params params.json --writes result.gds
                          [--margin 0.5] [--min-seed 1] [--size 10] [--bare 0.25] [--step 0.1] [--frame 2] [--layer 4/1]
 Run before mask.py.
 """
@@ -24,7 +24,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, graphene, load_params, read_layer, write_layer  # noqa: E402
+from tg_lib import Design, graphene, load_params, parse, read_layer, write_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -37,7 +37,7 @@ ap.add_argument("--bare", type=float, default=0.25, help="stop growing once bare
 ap.add_argument("--step", type=float, default=0.1, help="search grid, um")
 ap.add_argument("--frame", type=float, default=2.0, help="um around the flake bounding box (R, as mask.py --margin)")
 ap.add_argument("--layer", default="4/1")
-a = ap.parse_args()
+a = parse(ap, "contacts/checker")
 
 P = load_params(a.params)
 D = Design(a.flakes, P)

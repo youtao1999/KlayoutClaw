@@ -8,7 +8,7 @@ P = T ∪ W ∪ X (as fingers.py), R' = bounding box of P grown by --margin, lea
    touches at most one electrode and does not touch P (slivers under 4 dbu wide, rounding
    along P's edge, are ignored).
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--frame 2]
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds [--frame 2]
 """
 import argparse
 import os
@@ -17,7 +17,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, graphene, layer, load_params, parse, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -29,7 +29,7 @@ ap.add_argument("--clear", type=float, default=0.25)
 ap.add_argument("--leads", default="2/0")
 ap.add_argument("--checker", default="4/1")
 ap.add_argument("--layer", default="7/0")
-a = ap.parse_args()
+a = parse(ap, "fingers/fingers", check=True)
 
 Pm = load_params(a.params)
 D = Design(a.flakes, Pm)

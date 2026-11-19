@@ -5,12 +5,12 @@ so each arm keeps room for its own electrode. One contact per allowed area, larg
 first, up to --n; inside an area the square sits as close to the top gate (channel + arms) as
 it can.
 
-Usage: python contacts.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python contacts.py --flakes prepared.gds --params params.json --writes result.gds
                           [--n 2] [--size 1.0] [--margin 0] [--clearance 0.3] [--escape 50]
                           [--channel 5/0] [--arms 5/1] [--layer 5/2]
 
 --margin: keep the square this far inside the allowed area, um.
-Reads the flakes and the top gate from writes.gds (run flakes.py, channel.py, arms.py first)
+Reads the flakes and the top gate from result.gds (run flakes.py, channel.py, arms.py first)
 and replaces --layer.
 """
 import argparse
@@ -19,7 +19,7 @@ import sys
 
 import klayout.db as db
 
-from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, load_params, read_layer, write_layer
+from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, load_params, parse, read_layer, write_layer
 from tg_lib import graphene as graphene_union
 
 ap = argparse.ArgumentParser()
@@ -34,7 +34,7 @@ ap.add_argument("--escape", type=float, default=ESCAPE)
 ap.add_argument("--channel", default="5/0")
 ap.add_argument("--arms", default="5/1")
 ap.add_argument("--layer", default="5/2")
-a = ap.parse_args()
+a = parse(ap, "topgate/contacts")
 
 P = load_params(a.params)
 D = Design(a.flakes, P)

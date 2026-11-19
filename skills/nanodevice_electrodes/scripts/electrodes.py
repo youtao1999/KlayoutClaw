@@ -29,10 +29,11 @@ BBN) (kept under PMMA by the 7/0 mask), one lead per piece. A piece's width is 2
 erodes to before vanishing (tg_lib.erode); only pieces with width − 0.1 >= --min-width count,
 thinner slivers are not terminals. Width: min(--width, piece width - 0.1).
 
-Usage: python electrodes.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python electrodes.py --flakes prepared.gds --params params.json --writes result.gds
                             [--width 0.8] [--inset 0.05] [--clear 1] [--tail-radius auto|<um>] [--tail-margin 30] [--bg-leads 2] [--min-width 0.3] [--layer 2/0]
 """
 import argparse
+import itertools
 import math
 import os
 import sys
@@ -40,7 +41,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, erode, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, bg_terminal, erode, graphene, layer, load_params, parse, read_layer, record  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -49,12 +50,14 @@ ap.add_argument("--writes", required=True)
 ap.add_argument("--width", type=float, default=0.8, help="um, lead width (slightly below the arm width)")
 ap.add_argument("--inset", type=float, default=0.05, help="um, head start inside the contact's inner edge")
 ap.add_argument("--clear", type=float, default=1.0, help="um, stub runs this far past the top gate on its side")
+ap.add_argument("--tail-slots", type=int, default=0, help="tail positions on the circle (default 0: one per lead); more give the top-gate and back-gate leads a choice")
+ap.add_argument("--spacing", type=float, default=0.5, help="um kept between leads when choosing the terminal leads' tails (as check.py)")
 ap.add_argument("--tail-radius", default="auto", help="um, circle of the lead tails around the channel centre, or auto")
 ap.add_argument("--tail-margin", type=float, default=30.0, help="um past the flakes' farthest bounding-box corner (auto radius)")
 ap.add_argument("--bg-leads", type=int, default=2, help="back-gate leads (user: the back gate has two)")
 ap.add_argument("--min-width", type=float, default=0.3, help="um, narrowest writable lead; thinner pieces of X are not terminals")
 ap.add_argument("--layer", default="2/0")
-a = ap.parse_args()
+a = parse(ap, "electrodes/electrodes")
 
 D = Design(a.flakes, load_params(a.params))
 ch, dbu = read_layer(a.writes, "5/0")
@@ -81,7 +84,8 @@ if a.tail_radius == "auto":
 else:
     rad = float(a.tail_radius)
 print("tails on a %.1f um circle around the channel centre" % rad)
-free_tails = [cc + db.DVector(math.cos(2 * math.pi * k / n), math.sin(2 * math.pi * k / n)) * rad for k in range(n)]
+slots = max(n, a.tail_slots)
+free_tails = [cc + db.DVector(math.cos(2 * math.pi * k / slots), math.sin(2 * math.pi * k / slots)) * rad for k in range(slots)]
 ang = lambda p: math.atan2(p.y - cc.y, p.x - cc.x)
 
 
@@ -121,48 +125,68 @@ def deepest(poly):
     return (c if p.inside(c) else next(p.each_point_hull())).to_dtype(dbu), 2 * depth
 
 
-def terminal_lead(poly, name, bg=False):
-    """Lead from deep inside a terminal (DPolygon, local frame) to the free tail nearest in
-    direction from the channel centre: stub along an axis, --clear past the terminal's bounding
-    box, then straight to the tail. Axes are tried nearest the tail first; the first whose lead
-    meets the stack (T ∪ BG) only on the terminal is taken."""
+def route(poly, end, bg):
+    """Lead from deep inside a terminal (DPolygon, local frame) to the tail end: stub along an axis,
+    --clear past the terminal's bounding box, then straight to the tail. Axes are tried nearest the
+    tail first; the first whose lead meets the stack (T ∪ BG) only on the terminal is returned as
+    (path, stub end), or None if every axis crosses the stack."""
     b = poly.bbox()
     c, width = deepest(poly)
-    want = math.atan2(c.y - cc.y, c.x - cc.x)
-    end = min(free_tails, key=lambda p: abs(math.remainder(ang(p) - want, 2 * math.pi)))
-    free_tails.remove(end)
     d = end - c
     w = min(a.width, (width if bg else min(b.width(), b.height())) - 0.1)
     ok = db.Region((D.T * poly).to_itype(dbu)).sized(1)
     stubs = [db.DPoint(b.left - a.clear, c.y), db.DPoint(b.right + a.clear, c.y),
              db.DPoint(c.x, b.bottom - a.clear), db.DPoint(c.x, b.top + a.clear)]
     stubs.sort(key=lambda s: -(s - c).sprod(d) / (s - c).length())   # axis nearest the tail first
-    for s in stubs:                                  # first stub whose lead meets the stack only on its terminal
+    for s in stubs:
         dp = db.DPath([c, s, end], w)
-        L = db.Region((D.T * dp).to_itype(dbu).polygon())
-        if ((L & stack) - ok).is_empty():
-            break
-    else:
-        sys.exit("%s: every stub direction crosses the stack outside the terminal" % name)
-    leads.append(dp)
-    print("%s (%.2f, %.2f): stub to (%.2f, %.2f), tail (%.1f, %.1f), width %.2f, length %.1f um"
-          % (name, c.x, c.y, s.x, s.y, end.x, end.y, w, c.distance(s) + s.distance(end)))
+        if ((reg(dp) & stack) - ok).is_empty():
+            return dp, s
+    return None
 
 
-for isl in loc(I):
-    terminal_lead(isl, "top-gate contact")
+reg = lambda dp: db.Region((D.T * dp).to_itype(dbu).polygon())
+plen = lambda dp: sum(p.distance(q) for p, q in zip(list(dp.each_point())[:-1], list(dp.each_point())[1:]))
 
-# back-gate lead: from the exposed bottom graphite X = BG − (TG ∪ TBN ∪ G ∪ BBN), its largest piece
-lm = load_params(a.params)["layers"]
-F = lambda k: read_layer(a.flakes, "%d/%d" % tuple(lm[k]))[0]
-X = (F("graphite") - F("top_graphite") - F("top_hbn") - graphene(a.flakes, load_params(a.params))[0] - F("bottom_hbn")).merged()
+# terminal leads: the top-gate contacts, then the back gate (from the exposed bottom graphite X =
+# BG − (TG ∪ TBN ∪ G ∪ BBN), its largest pieces)
+terms = [(isl, "top-gate contact", False) for isl in loc(I)]
+X = bg_terminal(a.flakes, load_params(a.params), a.writes)   # + edge terminals under BBN if back_gate.edge_contact
 pieces = sorted((p for p in loc(X) if deepest(p)[1] - 0.1 >= a.min_width - 1e-9), key=lambda p: -p.area())
 if len(pieces) < a.bg_leads:
     # shortcut: one lead per piece of X; two heads on one piece are not implemented yet
     sys.exit("need %d pieces of exposed bottom graphite at least %.2f um wide for %d back-gate leads, found %d"
              % (a.bg_leads, a.min_width + 0.1, a.bg_leads, len(pieces)))
-for k, p in enumerate(pieces[:a.bg_leads]):
-    terminal_lead(p, "back gate %d" % (k + 1), bg=True)
+terms += [(p, "back gate %d" % (k + 1), True) for k, p in enumerate(pieces[:a.bg_leads])]
+
+# tails for the terminal leads: every assignment of the free tails is tried (a greedy nearest-tail
+# choice can leave a later terminal only tails behind the channel); the shortest one where every lead
+# meets the stack only on its terminal and all leads stay --spacing apart wins
+gap = D.um(a.spacing)
+arm_regs = [reg(dp) for dp in leads]
+cand = {}                                            # (terminal, tail) -> (path, stub end, region), routes clear of the arm leads
+for i, (p, _, bg) in enumerate(terms):
+    for j, end in enumerate(free_tails):
+        got = route(p, end, bg)
+        if got and all((reg(got[0]).sized(gap) & o).is_empty() for o in arm_regs):
+            cand[i, j] = got + (reg(got[0]),)
+grown = {k: c[2].sized(gap) for k, c in cand.items()}
+clash = {(u, v): not (grown[u] & cand[v][2]).is_empty() for u in cand for v in cand if u[0] > v[0] and u[1] != v[1]}
+best = None
+for perm in itertools.permutations(range(len(free_tails)), len(terms)):
+    keys = list(enumerate(perm))
+    if any(k not in cand for k in keys) or any(clash[keys[x], keys[y]] for x in range(len(keys)) for y in range(x)):
+        continue
+    total = sum(plen(cand[k][0]) for k in keys)
+    if best is None or total < best[0]:
+        best = (total, [cand[k][:2] for k in keys])
+if best is None:
+    sys.exit("no assignment of tails lets every top-gate and back-gate lead avoid the stack and the other leads")
+for (_, name, _), (dp, s) in zip(terms, best[1]):
+    pts = list(dp.each_point())
+    leads.append(dp)
+    print("%s (%.2f, %.2f): stub to (%.2f, %.2f), tail (%.1f, %.1f), width %.2f, length %.1f um"
+          % (name, pts[0].x, pts[0].y, s.x, s.y, pts[-1].x, pts[-1].y, dp.width, plen(dp)))
 
 ly = db.Layout()
 ly.read(a.writes)
@@ -174,4 +198,6 @@ opt = db.SaveLayoutOptions()
 opt.format = "GDS2"
 ly.write(a.writes + ".part", opt)
 os.replace(a.writes + ".part", a.writes)
+record(a.params, "electrodes/electrodes", tail_radius=round(rad, 3), tail_slots=slots,
+       leads=[{"path": [[round(p.x, 3), round(p.y, 3)] for p in dp.each_point()], "width": dp.width} for dp in leads])
 print("%d leads -> %s" % (len(leads), a.layer))

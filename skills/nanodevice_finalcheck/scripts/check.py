@@ -18,7 +18,7 @@ L_BG, L_Gr the top-gate, back-gate and arm electrodes:
 4. no electrodes shorted together: any two electrodes are disjoint, and no conductor piece
    outside the devices (a piece of TG', Gr' or BG' not on the channel: debris) touches two of them.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds
 """
 import argparse
 import os
@@ -27,13 +27,13 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import bg_terminal, graphene, layer, load_params, parse, read_layer, record, sha256  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
 ap.add_argument("--params", required=True)
 ap.add_argument("--writes", required=True)
-a = ap.parse_args()
+a = parse(ap, "finalcheck/check", check=True)
 
 Pm = load_params(a.params)
 F = lambda k: read_layer(a.flakes, "%d/%d" % tuple(Pm["layers"][k]))[0]
@@ -53,7 +53,7 @@ ly.read(a.writes)
 dbu = ly.dbu
 paths = [db.Region(s.polygon) for s in ly.top_cell().shapes(ly.layer(*layer("2/0"))).each()]
 big = Wr("2/1")
-X = BG - TG - TBN - Gr - BBN
+X = bg_terminal(a.flakes, Pm, a.writes)
 electrodes = []                                  # (role, region: path + its pad and tentacle)
 for L in paths:
     role = [n for n, t in [("graphene", arms - ch), ("top gate", I), ("back gate", X)] if not (L & t).is_empty()]
@@ -91,4 +91,7 @@ print("%s 4. no electrodes shorted together%s" % ("PASS" if ok4 else "FAIL",
       "" if ok4 else ": " + ", ".join("%d-%d" % p for p in sorted(pairs)) + (" no role: %s" % bad if bad else "")))
 print("electrodes: %s; debris pieces %d" % (", ".join("%d %s" % (sum(n == r for n, _ in electrodes), r)
       for r in ("graphene", "top gate", "back gate")), len(debris)))
+record(a.params, "finalcheck/check", passed=not fails and ok4, failed=fails + ([] if ok4 else ["4"]),
+       electrodes={r: sum(n == r for n, _ in electrodes) for r in ("graphene", "top gate", "back gate")},
+       sha256={"writes": sha256(a.writes), "flakes": sha256(a.flakes)})
 sys.exit(1 if fails or not ok4 else 0)

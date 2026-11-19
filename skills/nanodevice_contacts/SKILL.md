@@ -31,8 +31,11 @@ whenever `mask.py` is rerun.
 
 ## Inputs and scope
 
+Arguments can also come from `data/params.json` `args` (block `contacts/<script>`); effective arguments
+and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
+
 All in the device folder's `klayoutclaw/`:
-- `writes.gds` with the top gate already written by `nanodevice_topgate`: channel 5/0,
+- `result.gds` with the top gate already written by `nanodevice_topgate`: channel 5/0,
   arms 5/1, top-gate contacts 5/2, top-gate electrodes 5/3, active region 11/4 and the
   flake copies. Do not rerun or change the top gate here.
 - `data/prepared.gds` (the flakes) and `data/params.json` (only the `layers` map and the
@@ -41,7 +44,7 @@ All in the device folder's `klayoutclaw/`:
 
 Writes only 4/1 (etch checker), 7/0 (top-gate etch mask) and 4/0 (contacts); each script
 replaces only its own layer. Not written here, later steps: 2/0 electrode (fine metal),
-2/1 big pads, 3/1. Python: the `instrMCPdev` conda env; on macOS run the procedure under
+2/1 big pads, 3/1. Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the `instrMCPdev` conda env; on macOS run the procedure under
 `bash -c` (zsh does not split `$A`).
 
 ## Set rules
@@ -52,7 +55,9 @@ replaces only its own layer. Not written here, later steps: 2/0 electrode (fine 
   hBN and top graphite, so X must be protected from it; everything below the top hBN (top
   hBN, all graphene pieces, bottom hBN) is taken out of X, so X keeps no graphene.
 - top-gate etch mask M = R − (T ∪ W ∪ X). Written (exposed); T, W and X stay under PMMA.
-  Etch goes down to the bottom hBN.
+  Etch goes down to the bottom hBN. With params `back_gate.edge_contact` the back-gate edge
+  terminals under the bottom hBN (`nanodevice_electrodes`) are not protected: the etch clears what
+  lies above them.
 - contacts C (4/0): rectangles. Etch goes down to the top hBN only: removes the top-top hBN
   and the top graphite in C, so the electrodes can reach the graphene there.
 - hard rule 1 (user, 2026-11-17): (T ∩ C) ∩ ∂C ⊆ A. Where the contact boundary lies on the
@@ -100,7 +105,7 @@ both are written in the same 4/x etch.
 
 ```
 cd <device>/klayoutclaw
-P=<python>; S=<skill>/scripts; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"
+P=<python>; S=<skill>/scripts; A="--flakes data/prepared.gds --params data/params.json --writes result.gds"
 $P $S/checker.py $A              # 1  etch checker W on 4/1
 $P $S/mask.py $A                 # 2  top-gate etch mask M = R - (T ∪ W ∪ X) on 7/0
 $P $S/contacts.py $A             # 3  contact rectangles on 4/0
@@ -128,10 +133,12 @@ growth of R in mask.py (2 um), clearance from the stack below in checker.py (0.5
    X = BG − (TG ∪ TBN ∪ G ∪ BBN).
    Stops if there is no top gate. Asserts flakes ⊆ R, M ∩ (T ∪ W ∪ X) = ∅,
    M ∪ T ∪ W ∪ X = R.
-3. **Contacts** (4/0), `contacts.py [--length 3]`. One rectangle per side, local frame:
+3. **Contacts** (4/0), `contacts.py [--length auto]`. One rectangle per side, local frame:
    - x': inner edge `--gap` + 0.05 um past the bottom-graphite edge (as close to the
      graphite as rule 3 allows, for the most head room on the arm tip), so C ∩ BG = ∅ and
-     C covers every arm's outer end (rule 2); outer edge `--length` further out.
+     C covers every arm's outer end (rule 2); outer edge `--length` further out (auto: 0.1 um
+     past the farthest arm tip on that side, at least 3 um; arms run to the active-region edge, so a
+     fixed 3 um cut long arm tips off the top gate).
    - y': the side's arm span grown by the corridor clearance (0.3 um), so C stays in the
      arm corridors, which the top-gate contacts and electrodes avoid (rule 1); then each
      y' edge is pulled in until C stays `--gap` (0.15 um) from the top-gate body (rule 3).

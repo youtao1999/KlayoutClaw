@@ -1,5 +1,11 @@
 # Dual-gated Hall bar recipe (graphite top gate + graphite bottom gate)
 
+> **Legacy for new devices (2026-11-19).** Six-piece dual-gated devices are designed with the
+> `nanodevice_*` skills: `skills/nanodevice_chain` runs them in one command (prepare, top gate,
+> contacts, electrodes, pads, fingers, final check, export). This recipe is kept to rebuild devices
+> designed with it. `fine_marker_align.py` and `make_prepared.py` in `../topgated_hallbar/` are
+> still used by `nanodevice_prepare`.
+
 Scripts used by a device folder's `instruction.md`, which holds the procedure, process and
 design rules. Everything runs offline on GDS files with `klayout.db`
 (python from the `instrMCPdev` conda env). Routing also runs offline

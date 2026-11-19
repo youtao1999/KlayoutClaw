@@ -7,7 +7,7 @@ it to the channel. Set rules:
 Each electrode is the shortest Manhattan route (local strip frame, few turns) of --width from
 the contact to a point that puts its end fully inside the channel; both ends sit fully inside.
 
-Usage: python electrodes.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python electrodes.py --flakes prepared.gds --params params.json --writes result.gds
                             [--width 0.5] [--clearance 0.3] [--escape 50] [--step 0.05] [--turn 1.0]
                             [--channel 5/0] [--arms 5/1] [--contacts 5/2] [--layer 5/3]
 """
@@ -17,7 +17,7 @@ import sys
 
 import klayout.db as db
 
-from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, load_params, read_layer, write_layer
+from tg_lib import CLEARANCE, ESCAPE, Design, arm_keepout, load_params, parse, read_layer, write_layer
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -32,7 +32,7 @@ ap.add_argument("--channel", default="5/0")
 ap.add_argument("--arms", default="5/1")
 ap.add_argument("--contacts", default="5/2")
 ap.add_argument("--layer", default="5/3")
-a = ap.parse_args()
+a = parse(ap, "topgate/electrodes")
 
 P = load_params(a.params)
 D = Design(a.flakes, P)

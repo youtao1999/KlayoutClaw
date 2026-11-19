@@ -19,14 +19,17 @@ set relation.
 
 ## Inputs and scope
 
+Arguments can also come from `data/params.json` `args` (block `pads/<script>`); effective arguments
+and choices go to `data/record.json`. See nanodevice_topgate, "Params and run record".
+
 All in the device folder's `klayoutclaw/`:
-- `writes.gds` with the electrodes 2/0 from `nanodevice_electrodes` (GDS paths; the last
+- `result.gds` with the electrodes 2/0 from `nanodevice_electrodes` (GDS paths; the last
   point of each is its tail) and the channel 5/0 (its centre is the pads' centre).
 - `data/prepared.gds` (flakes) and `data/params.json` (local frame and flake layers only;
   its old `layers.pads` [2,0], `layers.electrodes` and `pads`/`routing` blocks are ignored:
   here 2/0 = electrodes, 2/1 = big pads).
 
-Writes only 2/1 (pads and tentacles as separate shapes); rerunning is safe. Python: the
+Writes only 2/1 (pads and tentacles as separate shapes); rerunning is safe. Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the
 `instrMCPdev` conda env; run the procedure under `bash -c` (zsh does not split `$A`).
 
 ## Set rules
@@ -55,7 +58,7 @@ the `nanodevice_topgate`, `nanodevice_contacts` and `nanodevice_electrodes` glos
 
 ```
 cd <device>/klayoutclaw
-P=<python>; S=<KlayoutClaw>/skills/nanodevice_pads/scripts; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"
+P=<python>; S=<KlayoutClaw>/skills/nanodevice_pads/scripts; A="--flakes data/prepared.gds --params data/params.json --writes result.gds"
 $P $S/pads.py $A
 $P $S/check.py $A
 for s in topgate contacts electrodes; do $P <KlayoutClaw>/skills/nanodevice_$s/scripts/check.py $A; done   # earlier layers unchanged

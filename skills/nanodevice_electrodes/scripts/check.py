@@ -14,7 +14,7 @@ X = exposed bottom graphite BG − (TG ∪ TBN ∪ G ∪ BBN), the back-gate ter
    --bg-leads (2) back-gate leads.
 Sets are closed: A ∩ C, the island and the piece of X are grown by 1 dbu.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--spacing 0.5] [--min-width 0.3]
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds [--spacing 0.5] [--min-width 0.3]
 """
 import argparse
 import os
@@ -23,7 +23,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, erode, graphene, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, bg_terminal, erode, graphene, layer, load_params, parse, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -33,7 +33,7 @@ ap.add_argument("--spacing", type=float, default=0.5)
 ap.add_argument("--bg-leads", type=int, default=2)
 ap.add_argument("--min-width", type=float, default=0.3)
 ap.add_argument("--layer", default="2/0")
-a = ap.parse_args()
+a = parse(ap, "electrodes/electrodes", check=True)
 
 D = Design(a.flakes, load_params(a.params))
 R = lambda s: read_layer(a.writes, s)[0]
@@ -41,7 +41,7 @@ ch, arms, C, A, I = R("5/0"), R("5/1"), R("4/0"), R("11/4"), R("5/2")
 BG = D.R("graphite")
 lm = load_params(a.params)["layers"]
 F = lambda k: read_layer(a.flakes, "%d/%d" % tuple(lm[k]))[0]
-X = (BG - F("top_graphite") - F("top_hbn") - graphene(a.flakes, load_params(a.params))[0] - F("bottom_hbn")).merged()
+X = bg_terminal(a.flakes, load_params(a.params), a.writes)
 P = (ch + arms + I + R("5/3") + BG).merged()
 ly = db.Layout()
 ly.read(a.writes)

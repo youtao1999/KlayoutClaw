@@ -1,5 +1,8 @@
 # Top-gated Hall bar recipe
 
+> **Legacy for new devices (2026-11-19).** Use the `nanodevice_*` skills (`skills/nanodevice_chain`).
+> `fine_marker_align.py`, `make_prepared.py` and `recipe_lib.py` here are still used by them.
+
 Scripts used by a device folder's `instruction.md` (the full procedure, design rules and
 reference numbers live there). Geometry is built offline on GDS files with `klayout.db`
 (python from the `instrMCPdev` conda env); KLayout/MCP is only used for

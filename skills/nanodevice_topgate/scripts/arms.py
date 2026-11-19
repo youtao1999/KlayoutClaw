@@ -5,16 +5,16 @@ channel (by --overlap) out past the bottom-graphite edge by --overshoot. Default
 each arm runs out as far as it stays --edge-margin inside the active region (11/4), so the arm tip
 leaves room for the electrode head (user, 2026-11-17: longer arms for head room).
 
-Usage: python arms.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python arms.py --flakes prepared.gds --params params.json --writes result.gds
                       --n 3 --width 1 --gap 1 [--shift 0] [--overshoot max|<um>] [--edge-margin 0.1] [--overlap 0.5] [--sides L R]
                       [--channel 5/0] [--layer 5/1]
 
-Reads the channel from writes.gds (--channel, written by channel.py) and replaces --layer.
+Reads the channel from result.gds (--channel, written by channel.py) and replaces --layer.
 """
 import argparse
 import sys
 
-from tg_lib import Design, load_params, read_layer, write_layer
+from tg_lib import Design, load_params, parse, read_layer, write_layer
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -30,7 +30,7 @@ ap.add_argument("--overlap", type=float, default=0.5, help="arm start inside the
 ap.add_argument("--sides", nargs="+", default=["L", "R"], choices=["L", "R"])
 ap.add_argument("--channel", default="5/0")
 ap.add_argument("--layer", default="5/1")
-a = ap.parse_args()
+a = parse(ap, "topgate/arms")
 
 D = Design(a.flakes, load_params(a.params))
 ch, dbu = read_layer(a.writes, a.channel)

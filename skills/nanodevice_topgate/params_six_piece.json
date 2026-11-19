@@ -1,0 +1,144 @@
+{
+ "_note": "Device params for the six-piece chain (nanodevice_prepare, nanodevice_topgate, _contacts, _electrodes, _pads, _fingers, _finalcheck). Copy to <device>/klayoutclaw/data/params.json. Local frame: x' across the bottom graphite, y' along it towards gate_end, origin at the bottom-graphite hull centroid.",
+ "gate_end": "north",
+ "layers": {
+  "top_top_hbn": [
+   16,
+   0
+  ],
+  "top_graphite": [
+   14,
+   0
+  ],
+  "top_hbn": [
+   10,
+   0
+  ],
+  "graphene": [
+   11,
+   0
+  ],
+  "bottom_hbn": [
+   12,
+   0
+  ],
+  "graphite": [
+   13,
+   0
+  ],
+  "graphene_pieces": [
+   [
+    11,
+    1
+   ],
+   [
+    11,
+    2
+   ],
+   [
+    11,
+    3
+   ]
+  ]
+ },
+ "channel": {
+  "y": "auto",
+  "bg_inset": 0.5,
+  "min_width": 1.0,
+  "arm_reach": 0.7
+ },
+ "back_gate": {
+  "edge_contact": false,
+  "gap": 0.5,
+  "_note": "edge_contact: true when no bottom graphite is bare; back-gate leads then land on bottom graphite under the bottom hBN"
+ },
+ "args": {
+  "_note": "Per-script defaults, keyed '<skill>/<script>' with argument names (n, tail_slots, ...); the command line still wins. Any argument of a script may go in its block. Check scripts read their writer's block. Effective arguments and choices are written to record.json next to this file.",
+  "topgate/place": {
+   "n": 3,
+   "width": 1.0,
+   "gap": 1.0
+  },
+  "contacts/contacts": {
+   "length": "auto"
+  },
+  "electrodes/electrodes": {
+   "tail_slots": 0
+  },
+  "pads/pads": {
+   "size": 120.0
+  }
+ },
+ "prepare": {
+  "_note": "nanodevice_prepare: paths relative to the device folder; see its SKILL.md",
+  "photo": "photos/full_stack_raw.png",
+  "template": "Template.gds",
+  "field_center_um": [
+   2500,
+   2500
+  ],
+  "rotation_hint_deg": 0,
+  "um_per_px": 0.06173,
+  "marker_layer": [
+   19,
+   0
+  ],
+  "marker_pitch_um": 50,
+  "flakes": {
+   "top_top_hBN": {
+    "gds": "ingredients/BN003a.gds",
+    "layer": [
+     20,
+     0
+    ]
+   },
+   "top_graphite": {
+    "gds": "ingredients/Gt001a.gds",
+    "layer": [
+     30,
+     0
+    ]
+   },
+   "top_hBN": {
+    "gds": "ingredients/BN001a.gds",
+    "layer": [
+     20,
+     0
+    ]
+   },
+   "bottom_hBN": {
+    "gds": "ingredients/BN002a.gds",
+    "layer": [
+     20,
+     0
+    ]
+   },
+   "graphite": {
+    "gds": "ingredients/Gt002a.gds",
+    "layer": [
+     30,
+     0
+    ]
+   }
+  },
+  "graphene": {
+   "design": "design.gds",
+   "picked_by": "top_hBN",
+   "picked_by_layer": [
+    40,
+    0
+   ],
+   "pieces_layer": [
+    2,
+    0
+   ],
+   "compare": {
+    "bottom_hBN": [
+     50,
+     0
+    ]
+   }
+  },
+  "deviations": ""
+ }
+}

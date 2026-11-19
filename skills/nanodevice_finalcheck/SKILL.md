@@ -1,6 +1,6 @@
 ---
 name: nanodevice_finalcheck
-description: Final electrical check of a finished six-piece dual-gated graphene device design (after nanodevice_topgate, _contacts, _electrodes, _pads, _fingers). Pure set arithmetic on the pieces left after both etches, each device joined with its electrodes: top gate, graphene and back gate must not be shorted together, and no two electrodes may be shorted.
+description: Final electrical check of a finished six-piece dual-gated graphene device design (after nanodevice_topgate, _contacts, _electrodes, _pads, _fingers), then export of writes.gds (EBL layers only) from result.gds. Pure set arithmetic on the pieces left after both etches, each device joined with its electrodes: top gate, graphene and back gate must not be shorted together, and no two electrodes may be shorted.
 ---
 
 # nanodevice_finalcheck -- shorts by set arithmetic
@@ -26,7 +26,8 @@ Primed sets, each piece after both etches:
 
 Star sets, each device with its electrodes (an electrode = its 2/0 path with its 2/1
 tentacle and pad; its role from its head: arm -> graphene, top-gate contact 5/2 -> top
-gate, exposed bottom graphite -> back gate):
+gate, exposed bottom graphite -> back gate; with params `back_gate.edge_contact` also the bottom
+graphite under the bottom hBN away from the top gate, `tg_lib.bg_terminal`):
 - TG* = TG' ∪ top-gate leads
 - BG* = BG' ∪ back-gate leads
 - Gr* = Gr' ∪ arm electrodes
@@ -45,12 +46,24 @@ because the top hBN lies under the top graphite, not between it and the metal.)
 
 ## Procedure
 
+The verdict (checks passed, electrode counts, sha256 of the checked files) is added to `data/record.json` under
+`finalcheck/check` (nanodevice_topgate, "Params and run record").
+
 ```
 cd <device>/klayoutclaw
-P=<python>; A="--flakes data/prepared.gds --params data/params.json --writes writes.gds"
+P=<python>; A="--flakes data/prepared.gds --params data/params.json --writes result.gds"
 $P <KlayoutClaw>/skills/nanodevice_finalcheck/scripts/check.py $A
+$P <KlayoutClaw>/skills/nanodevice_finalcheck/scripts/export.py $A    # only after a PASS
 ```
-Python: the `instrMCPdev` conda env; run under `bash -c` (zsh does not split `$A`).
+
+**Export** (`export.py`): writes the deliverables next to result.gds. `writes.gds` holds only the EBL
+write layers (7/0, 4/0, 4/1 if any, 2/0, 2/1: the file sent to the EBL) with `writes.lyp`;
+`result.lyp` names the layers of result.gds (template, the flakes where they landed, every design
+layer: the file to review); `<photo>.lyimg` is the full-stack photo placed by the marker alignment.
+It refuses a design whose final check has not passed, or whose result.gds or prepared.gds changed
+since it passed (check.py records their sha256 with the verdict; `--force` overrides). The stack plan
+`design.gds` is never written.
+Python: on Linux plain `python3` (`docs/device_skills_linux.md`); on the Mac the `instrMCPdev` conda env; run under `bash -c` (zsh does not split `$A`).
 
 ## Negative tests
 

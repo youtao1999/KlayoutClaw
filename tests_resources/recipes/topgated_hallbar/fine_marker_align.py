@@ -103,7 +103,27 @@ assert angs, "no blob pairs at the expected marker pitch - check --ps"
 angs = np.array(angs)
 th0 = np.angle(np.mean(np.exp(4j * angs))) / 4          # circular mean mod 90 deg
 s0 = 1 / a.ps
-anchor = bl[np.argmax(bl[:, 2]), :2]
+
+# flakes light up R as much as the markers do and outvote the marker pattern: keep R only in windows
+# around the lattice points, found as the lattice phase (rotation th0, pitch L0) where blobs cluster
+site_um = max(np.ptp(np.r_[fs[m][:, 0] - fs[m][:, 2] / 2, fs[m][:, 0] + fs[m][:, 2] / 2]) for m in
+              ((abs(fs[:, 0] - x) < a.pitch / 4) & (abs(fs[:, 1] - y) < a.pitch / 4) for x, y in sites))
+win = site_um / a.ps
+uu, vv = np.array([np.cos(th0), np.sin(th0)]), np.array([-np.sin(th0), np.cos(th0)])
+nbin = max(4, int(L0 / (win / 2)))
+hist, _, _ = np.histogram2d((bl[:, :2] @ uu) % L0, (bl[:, :2] @ vv) % L0, bins=nbin, range=[[0, L0], [0, L0]])
+iu, iv = np.unravel_index(np.argmax(hist), hist.shape)
+cu, cv = (iu + 0.5) * L0 / nbin, (iv + 0.5) * L0 / nbin
+yy, xx = np.mgrid[0:H, 0:W]
+du = ((xx * uu[0] + yy * uu[1] - cu + L0 / 2) % L0) - L0 / 2
+dv = ((xx * vv[0] + yy * vv[1] - cv + L0 / 2) % L0) - L0 / 2
+keep = (np.abs(du) < 1.5 * win) & (np.abs(dv) < 1.5 * win)
+R = np.where(keep, R, 0).astype(np.float32)
+Rs = cv2.GaussianBlur(R, (0, 0), 4.0)
+# anchor: the blob with the most neighbours at the marker pitch (then the largest); the largest blob
+# alone can be a flake and then every hypothesis is wrong
+near = [int(np.sum(np.abs(np.hypot(*(bl[:, :2] - b[:2]).T) - L0) < 0.12 * L0)) for b in bl]
+anchor = bl[max(range(len(bl)), key=lambda i: (near[i], bl[i, 2])), :2]
 
 res = []
 for mir in ([False, True] if a.allow_mirror else [False]):
@@ -135,21 +155,36 @@ assert cands, "no hypothesis near --rot-hint"
 h = cands[0]
 s, th, tx, ty = h["params"]; M = Amat(s, th, h["mirror"])
 
-# ---- lattice-offset check: score() rewards hypotheses that put more squares in view, so a
-# neighbouring site row/column can win. Re-pick the offset by the MEAN marker response on the squares.
-def mean_score(t):
-    Pp = sub @ M.T + t
-    ins = (Pp[:, 0] > 5) & (Pp[:, 0] < W - 6) & (Pp[:, 1] > 5) & (Pp[:, 1] < H - 6)
-    return float(samp(R, Pp[ins]).mean()) if ins.sum() > 50 else 0.0
+# ---- lattice-offset check: score() rewards hypotheses that put more squares in view, and after blurring
+# every site's 2-3 squares look alike, so a neighbouring site row/column can win. Re-pick the offset by the
+# coded pattern: per site, normalised correlation of its rendered squares with R; median over the sites.
+def site_score(t):
+    vals, h = [], int(win)
+    for sx, sy in sites:
+        c = M @ np.array([sx, sy]) + t
+        if not (h + 12 < c[0] < W - h - 12 and h + 12 < c[1] < H - h - 12):
+            continue
+        tpl = np.zeros((2 * h, 2 * h), np.float32)
+        m = (abs(fs[:, 0] - sx) < a.pitch / 4) & (abs(fs[:, 1] - sy) < a.pitch / 4)
+        for x, y, w, hh in fs[m]:
+            q = np.array([[x - w / 2, y - hh / 2], [x + w / 2, y - hh / 2], [x + w / 2, y + hh / 2], [x - w / 2, y + hh / 2]])
+            cv2.fillPoly(tpl, [np.round(q @ M.T + t - c + h).astype(np.int32)], 1.0)
+        if tpl.std() == 0:
+            continue
+        x0, y0 = int(c[0]) - h - 10, int(c[1]) - h - 10
+        vals.append(cv2.matchTemplate(R[y0:y0 + 2 * h + 20, x0:x0 + 2 * h + 20], cv2.GaussianBlur(tpl, (0, 0), 2.0),
+                                      cv2.TM_CCOEFF_NORMED).max())
+    return float(np.median(vals)) if len(vals) >= 4 else -1.0
 offs = []
-for i in range(-2, 3):
-    for j in range(-2, 3):
+for i in range(-6, 7):
+    for j in range(-6, 7):
         t = np.array([tx, ty]) - M @ np.array([i * a.pitch, j * a.pitch])
-        offs.append((mean_score(t), i, j, t))
+        offs.append((site_score(t), i, j, t))
 offs.sort(key=lambda z: -z[0])
 lattice_check = dict(chosen_offset_sites=[offs[0][1], offs[0][2]], mean_response=round(offs[0][0], 4),
                      runner_up=dict(offset_sites=[offs[1][1], offs[1][2]], mean_response=round(offs[1][0], 4)),
-                     unshifted=round(next(z[0] for z in offs if z[1] == 0 and z[2] == 0), 4))
+                     unshifted=round(next(z[0] for z in offs if z[1] == 0 and z[2] == 0), 4),
+                     note="mean_response = median per-site correlation of the coded marker pattern")
 tx, ty = offs[0][3]
 
 # ---- per-site refinement + LSQ similarity, iterated: each pass searches around the sites predicted

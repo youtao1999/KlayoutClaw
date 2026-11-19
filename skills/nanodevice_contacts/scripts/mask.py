@@ -8,7 +8,7 @@ graphite; everything below the top hBN (top hBN, graphene pieces, bottom hBN) is
 M is the written (exposed) area; T, W and X stay under PMMA. The etch goes all the way down to
 the bottom hBN, so it defines the shape of the top gate and of the graphene.
 
-Usage: python mask.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python mask.py --flakes prepared.gds --params params.json --writes result.gds
                       [--margin 2] [--checker 4/1] [--layer 7/0]
 Run checker.py first (an empty 4/1 is fine: no checker on this stack).
 """
@@ -19,7 +19,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import graphene, load_params, read_layer, write_layer  # noqa: E402
+from tg_lib import graphene, load_params, parse, read_layer, write_layer  # noqa: E402
 
 FLAKES = ["top_top_hbn", "top_graphite", "top_hbn", "graphene", "bottom_hbn", "graphite"]
 TOP_GATE = ["5/0", "5/1", "5/2", "5/3"]
@@ -31,7 +31,7 @@ ap.add_argument("--writes", required=True)
 ap.add_argument("--margin", type=float, default=2.0, help="um added around the flake bounding box")
 ap.add_argument("--checker", default="4/1")
 ap.add_argument("--layer", default="7/0")
-a = ap.parse_args()
+a = parse(ap, "contacts/mask")
 
 P = load_params(a.params)
 fl = {k: read_layer(a.flakes, "%d/%d" % tuple(P["layers"][k])) for k in FLAKES}

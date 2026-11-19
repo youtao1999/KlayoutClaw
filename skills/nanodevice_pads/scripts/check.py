@@ -7,7 +7,7 @@
 3. pads --gap apart; tentacles --gap from other tentacles and other pads.
 4. pads and tentacles stay --clear away from the flakes' bounding box.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds
 """
 import argparse
 import os
@@ -16,7 +16,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, layer, load_params, read_layer  # noqa: E402
+from tg_lib import Design, layer, load_params, parse, read_layer  # noqa: E402
 
 FLAKES = ["top_top_hbn", "top_graphite", "top_hbn", "graphene", "bottom_hbn", "graphite"]
 
@@ -29,7 +29,7 @@ ap.add_argument("--gap", type=float, default=20.0)
 ap.add_argument("--clear", type=float, default=20.0)
 ap.add_argument("--leads", default="2/0")
 ap.add_argument("--layer", default="2/1")
-a = ap.parse_args()
+a = parse(ap, "pads/pads", check=True)
 
 P = load_params(a.params)
 D = Design(a.flakes, P)

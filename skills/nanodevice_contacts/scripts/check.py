@@ -9,7 +9,7 @@
 4. Room for every electrode head: per arm, T ∩ C ∩ A (graphene left, top graphite etched
    away) reaches at least --min-head along x'.
 
-Usage: python check.py --flakes prepared.gds --params params.json --writes writes.gds [--contacts 4/0]
+Usage: python check.py --flakes prepared.gds --params params.json --writes result.gds [--contacts 4/0]
 """
 import argparse
 import os
@@ -18,7 +18,7 @@ import sys
 import klayout.db as db
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "nanodevice_topgate", "scripts"))
-from tg_lib import Design, body, load_params, read_layer  # noqa: E402
+from tg_lib import Design, body, load_params, parse, read_layer  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--flakes", required=True)
@@ -27,7 +27,7 @@ ap.add_argument("--writes", required=True)
 ap.add_argument("--contacts", default="4/0")
 ap.add_argument("--min-head", type=float, default=0.4, help="um, shortest head room along x'")
 ap.add_argument("--gap", type=float, default=0.15, help="um kept between C and the top-gate body")
-a = ap.parse_args()
+a = parse(ap, "contacts/contacts", check=True)
 
 D = Design(a.flakes, load_params(a.params))
 C, dbu = read_layer(a.writes, a.contacts)
